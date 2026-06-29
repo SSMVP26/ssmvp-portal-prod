@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Register as a Donor • Vadtaldham Perth</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin:0; background:#f1f5f9; font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif; color:#1e293b; }
+  .wrap { max-width:520px; margin:0 auto; padding:24px 16px 48px; }
+  .card { background:#fff; border:1px solid #e2e8f0; border-radius:18px; overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,0.06); }
+  .head { background:#8B1A1A; color:#fff; padding:26px 24px; }
+  .head .sub { font-size:11px; letter-spacing:2px; text-transform:uppercase; opacity:.8; }
+  .head .ttl { font-size:22px; font-weight:800; margin-top:4px; }
+  .head .desc { font-size:13px; opacity:.92; margin-top:8px; line-height:1.5; }
+  .body { padding:22px 24px 26px; }
+  label { display:block; font-size:12px; font-weight:700; color:#475569; letter-spacing:.5px; margin:14px 0 6px; }
+  .req { color:#dc2626; }
+  input { width:100%; padding:13px 14px; border:1px solid #cbd5e1; border-radius:12px; font-size:15px; background:#f8fafc; }
+  input:focus { outline:none; border-color:#8B1A1A; background:#fff; }
+  .row2 { display:flex; gap:12px; }
+  .row2 > div { flex:1; }
+  .hp { position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden; }
+  button { width:100%; margin-top:22px; padding:15px; border:none; border-radius:14px; background:#8B1A1A; color:#fff; font-size:15px; font-weight:800; cursor:pointer; }
+  button:disabled { opacity:.6; cursor:default; }
+  .msg { margin-top:16px; padding:12px 14px; border-radius:12px; font-size:14px; font-weight:600; display:none; }
+  .err { background:#fef2f2; color:#b91c1c; border:1px solid #fecaca; }
+  .foot { text-align:center; font-size:12px; color:#94a3b8; margin-top:14px; }
+  .done { text-align:center; padding:34px 10px; }
+  .done .big { font-size:48px; }
+  .done h2 { color:#047857; margin:12px 0 6px; }
+  .done p { color:#475569; font-size:14px; line-height:1.6; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <div class="head">
+      <div class="sub">Shree Swaminarayan Mandir</div>
+      <div class="ttl">Vadtaldham Perth</div>
+      <div class="desc">Register as a donor to receive your receipts and temple updates. Your details are kept private and are reviewed by the temple team before being added.</div>
+    </div>
+    <div class="body" id="form-body">
+      <label>First name <span class="req">*</span></label>
+      <input id="firstName" type="text" autocomplete="given-name">
+      <label>Last name <span class="req">*</span></label>
+      <input id="lastName" type="text" autocomplete="family-name">
+      <label>Email</label>
+      <input id="email" type="email" autocomplete="email" placeholder="you@example.com">
+      <label>Phone</label>
+      <input id="phone" type="tel" autocomplete="tel" placeholder="04xx xxx xxx">
+      <label>Street address</label>
+      <input id="address" type="text" autocomplete="address-line1">
+      <div class="row2">
+        <div><label>Suburb</label><input id="suburb" type="text"></div>
+        <div><label>Postcode</label><input id="postcode" type="text" inputmode="numeric"></div>
+      </div>
+      <input class="hp" id="website" type="text" tabindex="-1" autocomplete="off" aria-hidden="true">
+      <div class="msg err" id="err"></div>
+      <button id="submitBtn" onclick="submitSignup()">Register</button>
+      <div class="foot">Please provide at least an email or a phone number.</div>
+    </div>
+  </div>
+</div>
+<script>
+  const API = 'https://script.google.com/macros/s/AKfycbyXkBIk4vEiYTaCXluBUyc62hFkUQFVXrctQ_Exm5nT4QQ2ZCwwwoFblyQychyiRGWk/exec';
+  const KEY = 'jGLPE_w9qRj1r76k4RferRM_';
+  function val(id){ return (document.getElementById(id).value || '').trim(); }
+  function showErr(m){ const e = document.getElementById('err'); e.textContent = m; e.style.display = 'block'; }
+  async function submitSignup(){
+    const fn = val('firstName'), ln = val('lastName'), email = val('email'), phone = val('phone');
+    if (!fn || !ln) { showErr('Please enter your first and last name.'); return; }
+    if (!email && !phone) { showErr('Please provide at least an email or a phone number.'); return; }
+    if (email && !/\S+@\S+\.\S+/.test(email)) { showErr('Please enter a valid email address.'); return; }
+    document.getElementById('err').style.display = 'none';
+    const btn = document.getElementById('submitBtn'); btn.disabled = true; btn.textContent = 'Submitting…';
+    try {
+      const res = await fetch(API, {
+        method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action:'donor_signup', key:KEY, firstName:fn, lastName:ln, email:email, phone:phone,
+          address:val('address'), suburb:val('suburb'), postcode:val('postcode'), hp:val('website') })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!data || !data.ok) throw new Error((data && data.error) || 'failed');
+      document.getElementById('form-body').innerHTML =
+        '<div class="done"><div class="big">🙏</div><h2>Thank you!</h2>' +
+        '<p>Your details have been submitted. The temple team will add you to the donor records shortly.</p>' +
+        '<p style="margin-top:12px;font-weight:700;color:#8B1A1A">Jay Shree Swaminarayan</p></div>';
+    } catch (err) {
+      btn.disabled = false; btn.textContent = 'Register';
+      showErr('Sorry, something went wrong. Please try again.');
+    }
+  }
+</script>
+</body>
+</html>
