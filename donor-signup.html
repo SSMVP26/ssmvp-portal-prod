@@ -45,7 +45,7 @@
       <input id="firstName" type="text" autocomplete="given-name">
       <label>Last name <span class="req">*</span></label>
       <input id="lastName" type="text" autocomplete="family-name">
-      <label>Email</label>
+      <label>Email <span class="req">*</span></label>
       <input id="email" type="email" autocomplete="email" placeholder="you@example.com">
       <label>Phone</label>
       <input id="phone" type="tel" autocomplete="tel" placeholder="04xx xxx xxx">
@@ -58,7 +58,7 @@
       <input class="hp" id="website" type="text" tabindex="-1" autocomplete="off" aria-hidden="true">
       <div class="msg err" id="err"></div>
       <button id="submitBtn" onclick="submitSignup()">Register</button>
-      <div class="foot">Please provide at least an email or a phone number.</div>
+      <div class="foot">Your email is required so we can send your receipt.</div>
     </div>
   </div>
 </div>
@@ -70,8 +70,8 @@
   async function submitSignup(){
     const fn = val('firstName'), ln = val('lastName'), email = val('email'), phone = val('phone');
     if (!fn || !ln) { showErr('Please enter your first and last name.'); return; }
-    if (!email && !phone) { showErr('Please provide at least an email or a phone number.'); return; }
-    if (email && !/\S+@\S+\.\S+/.test(email)) { showErr('Please enter a valid email address.'); return; }
+    if (!email) { showErr('Please enter your email address (needed for your receipt).'); return; }
+    if (!/\S+@\S+\.\S+/.test(email)) { showErr('Please enter a valid email address.'); return; }
     document.getElementById('err').style.display = 'none';
     const btn = document.getElementById('submitBtn'); btn.disabled = true; btn.textContent = 'Submitting…';
     try {
