@@ -6205,6 +6205,71 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
     // (The firstTimeSetup() function is still defined; it can be called from the browser
     //  console if a brand-new environment ever needs its first admin bootstrapped.)
 
+    /* ════════════ Pending donor sign-ups (admin review of QR submissions) ════════════ */
+    async function openPendingSignups(){
+        if (!currentUser || currentUser.role !== 'admin'){ showToast('Admins only.', 'amber'); return; }
+        let data;
+        try { data = await apiPost({ action:'list_signups', session: sessionToken }); }
+        catch(e){ showToast('Could not load sign-ups.', 'red'); return; }
+        if (!data || !data.ok){ showToast('Could not load sign-ups.', 'red'); return; }
+        renderPendingSignups(data.signups || []);
+    }
+    function renderPendingSignups(list){
+        let m = document.getElementById('pending-signups-modal');
+        if (!m){
+            m = document.createElement('div');
+            m.id = 'pending-signups-modal';
+            m.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.6);z-index:99998;display:flex;align-items:center;justify-content:center;padding:16px';
+            m.onclick = function(ev){ if (ev.target === m) m.remove(); };
+            document.body.appendChild(m);
+        }
+        const rowsHtml = list.map(function(s){
+            const name = escHtml((s.firstName || '') + ' ' + (s.lastName || ''));
+            const contact = escHtml([s.email, s.phone].filter(Boolean).join('  ·  '));
+            const addr = escHtml([s.address, s.suburb, s.postcode].filter(Boolean).join(', '));
+            return '<div style="border:1px solid #e2e8f0;border-radius:14px;padding:14px;margin-bottom:10px">' +
+                     '<div style="font-weight:800">' + name + '</div>' +
+                     '<div style="font-size:13px;color:#475569;margin-top:2px">' + (contact || '—') + '</div>' +
+                     (addr ? '<div style="font-size:12px;color:#94a3b8;margin-top:2px">' + addr + '</div>' : '') +
+                     '<div style="display:flex;gap:8px;margin-top:10px">' +
+                       '<button onclick="approveSignup(\'' + s.signupId + '\')" style="flex:1;background:#059669;color:#fff;border:none;padding:9px;border-radius:10px;font-weight:700;cursor:pointer">Approve</button>' +
+                       '<button onclick="rejectSignup(\'' + s.signupId + '\')" style="flex:1;background:#f1f5f9;color:#475569;border:none;padding:9px;border-radius:10px;font-weight:700;cursor:pointer">Reject</button>' +
+                     '</div></div>';
+        }).join('');
+        m.innerHTML = '<div style="background:#fff;border-radius:18px;max-width:460px;width:100%;max-height:80vh;overflow:auto;padding:22px;font-family:Arial,sans-serif">' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">' +
+              '<div style="font-size:18px;font-weight:900;color:#0f172a">Pending donor sign-ups</div>' +
+              '<button onclick="document.getElementById(\'pending-signups-modal\').remove()" style="background:none;border:none;font-size:24px;line-height:1;cursor:pointer;color:#94a3b8">&times;</button>' +
+            '</div>' +
+            (list.length ? rowsHtml : '<div style="text-align:center;color:#94a3b8;padding:24px">No pending sign-ups right now.</div>') +
+            '</div>';
+    }
+    async function approveSignup(id){
+        const d = await apiPost({ action:'approve_signup', session: sessionToken, signupId: id });
+        if (d && d.ok){ showToast('Added to the Donor Directory.', 'emerald'); try { audit('signup_approved', 'Approved a donor sign-up', ''); } catch(e){} await pullFromCloud(); await openPendingSignups(); }
+        else showToast('Could not approve that sign-up.', 'red');
+    }
+    async function rejectSignup(id){
+        const d = await apiPost({ action:'reject_signup', session: sessionToken, signupId: id });
+        if (d && d.ok){ showToast('Sign-up removed.', 'amber'); await openPendingSignups(); }
+        else showToast('Could not remove that sign-up.', 'red');
+    }
+    // Inject the "Pending sign-ups" button into the Donor Directory toolbar (admins use it).
+    (function(){
+        try {
+            var grid = document.getElementById('donor-grid');
+            var bar = grid ? grid.previousElementSibling : null;
+            if (bar && !document.getElementById('pending-signups-btn')){
+                var btn = document.createElement('button');
+                btn.id = 'pending-signups-btn';
+                btn.innerHTML = '🕑 Pending sign-ups';
+                btn.className = 'flex items-center gap-2 text-xs font-bold text-amber-700 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 px-4 py-2 rounded-2xl transition-all';
+                btn.onclick = openPendingSignups;
+                bar.insertBefore(btn, bar.firstChild);
+            }
+        } catch(e){}
+    })();
+
     window.onload = init;
 </script>
 </body>
