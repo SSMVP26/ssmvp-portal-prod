@@ -5407,26 +5407,27 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
         if (!fname || !lname) { errEl.textContent = 'First and last name are required.'; errEl.classList.remove('hidden'); return; }
         if (!phone)            { errEl.textContent = 'Phone number is required.';         errEl.classList.remove('hidden'); return; }
         if (!email || !/\S+@\S+\.\S+/.test(email)) { errEl.textContent = 'A valid email is required.'; errEl.classList.remove('hidden'); return; }
-
-        // Duplicate email check (excluding self on edit)
-        const dup = donors.find(d => d.email.toLowerCase() === email.toLowerCase() && d.id !== id);
-        if (dup) { errEl.textContent = `Email already used by ${dup.firstName} ${dup.lastName}.`; errEl.classList.remove('hidden'); return; }
         errEl.classList.add('hidden');
 
+        const fields = { firstName: fname, lastName: lname, phone: phone, email: email, address: address, suburb: suburb, postcode: postcode, xeroRef: xeroRef };
+
         if (id) {
+            // Editing an existing donor — update in place.
+            const dup = donors.find(d => (d.email || '').toLowerCase() === email.toLowerCase() && d.id !== id);
+            if (dup) { errEl.textContent = `Email already used by ${dup.firstName} ${dup.lastName}.`; errEl.classList.remove('hidden'); return; }
             const d = donors.find(x => x.id === id);
-            if (d) Object.assign(d, { firstName: fname, lastName: lname, phone, email, address, suburb, postcode, xeroRef });
+            if (d) Object.assign(d, fields);
             audit('donor_updated', `Updated donor "${fname} ${lname}"`, `Phone: ${phone} · Email: ${email}`);
-        } else {
-            donors.push({ id: nextSeqId('DON', donors), firstName: fname, lastName: lname, phone, email, address, suburb, postcode, xeroRef, total: 0, count: 0 });
-            audit('donor_created', `Added donor "${fname} ${lname}"`, `Phone: ${phone} · Email: ${email}`);
+            saveToStorage(); updateDonorDatalist(); renderDonors(); closeDonorModal();
+            if (syncConfig.enabled && syncConfig.url) pushDirectoryToCloud('Donors', buildDonorPayload(d));
+            showToast(`Donor "${fname} ${lname}" updated.`, 'emerald');
+            return;
         }
-        saveToStorage();
-        updateDonorDatalist();
-        renderDonors();
-        closeDonorModal();
-        if (syncConfig.enabled && syncConfig.url) pushDirectoryToCloud('Donors', buildDonorPayload(id ? donors.find(x=>x.id===id) : donors[donors.length-1]));
-        showToast(`Donor "${fname} ${lname}" ${id ? 'updated' : 'added'}.`, 'emerald');
+
+        // Adding — flag a likely existing donor first (same compare/merge as the QR sign-up flow).
+        const matches = donorMatchesLocal(fname, lname, email, phone);
+        if (matches.length) { showDonorMatchPrompt(fields, matches); return; }
+        createDonorRecord(fields);
     }
 
     function deleteDonor(id) {
@@ -6212,7 +6213,8 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
         try { data = await apiPost({ action:'list_signups', session: sessionToken }); }
         catch(e){ showToast('Could not load sign-ups.', 'red'); return; }
         if (!data || !data.ok){ showToast('Could not load sign-ups.', 'red'); return; }
-        renderPendingSignups(data.signups || []);
+        _pendingList = data.signups || [];
+        renderPendingSignups(_pendingList);
     }
     function renderPendingSignups(list){
         let m = document.getElementById('pending-signups-modal');
@@ -6235,6 +6237,8 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
             const contact = escHtml([s.email, s.phone].filter(Boolean).join('  ·  '));
             const addr = [s.address, s.suburb, s.postcode].filter(Boolean).join(', ');
             const matches = s.matches || [];
+            const pdupes = s.pendingDupes || [];
+            const pdupeNames = escHtml(pdupes.map(function(x){ return x.name || '(no name)'; }).join(', '));
             const matchHtml = matches.map(function(mm){
                 const mAddr = [mm.address, mm.suburb, mm.postcode].filter(Boolean).join(', ');
                 return '<div style="border:1px solid #fcd34d;background:#fffbeb;border-radius:12px;padding:12px;margin-top:10px">' +
@@ -6254,6 +6258,7 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
                      '<div style="font-weight:800">' + name + ' <span style="font-size:10px;background:#dbeafe;color:#1d4ed8;padding:2px 7px;border-radius:99px;font-weight:700">NEW</span></div>' +
                      '<div style="font-size:13px;color:#475569;margin-top:2px">' + (contact || '—') + '</div>' +
                      (addr ? '<div style="font-size:12px;color:#94a3b8;margin-top:2px">' + escHtml(addr) + '</div>' : '') +
+                     (pdupes.length ? '<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:8px 10px;margin-top:8px;font-size:11.5px;color:#b91c1c;font-weight:700">&#9888; Also waiting in this list (likely the same person): ' + pdupeNames + ' — approve ONE, reject the rest.</div>' : '') +
                      (matches.length ? '<div style="font-size:11px;color:#b45309;font-weight:700;margin-top:10px">⚠ ' + matches.length + ' possible existing match' + (matches.length > 1 ? 'es' : '') + ' — compare and choose:</div>' : '') +
                      matchHtml +
                      '<div style="display:flex;gap:8px;margin-top:12px">' +
@@ -6277,15 +6282,21 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
                 try { safeStorage.setItem('ssmvp_donors', JSON.stringify(donors)); } catch(e){}
                 renderDonors(); updateDonorDatalist();
             }
+            _pendingList = _pendingList.filter(function(x){ return x.signupId !== id; });
+            recomputePending(_pendingList);
+            renderPendingSignups(_pendingList);
             showToast(d.updated ? 'Existing donor updated — no duplicate created.' : 'Added to the Donor Directory.', 'emerald');
             try { audit('signup_approved', 'Approved a donor sign-up (' + (d.updated ? 'merged into existing' : 'new') + ')', ''); } catch(e){}
-            await openPendingSignups();
         } else showToast('Could not approve that sign-up.', 'red');
     }
     async function rejectSignup(id){
         const d = await apiPost({ action:'reject_signup', session: sessionToken, signupId: id });
-        if (d && d.ok){ showToast('Sign-up removed.', 'amber'); await openPendingSignups(); }
-        else showToast('Could not remove that sign-up.', 'red');
+        if (d && d.ok){
+            _pendingList = _pendingList.filter(function(x){ return x.signupId !== id; });
+            recomputePending(_pendingList);
+            renderPendingSignups(_pendingList);
+            showToast('Sign-up removed.', 'amber');
+        } else showToast('Could not remove that sign-up.', 'red');
     }
     // Inject the "Pending sign-ups" button into the Donor Directory toolbar (admins use it).
     (function(){
@@ -6302,6 +6313,130 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
             }
         } catch(e){}
     })();
+
+    /* ════════════ Duplicate check when adding a donor from the Directory ════════════ */
+    var _newDonorDraft = null;
+    function donorMatchesLocal(fname, lname, email, phone){
+        var em = (email || '').trim().toLowerCase();
+        var ph = (phone || '').replace(/\D/g, '');
+        var fn = (fname || '').trim().toLowerCase();
+        var ln = (lname || '').trim().toLowerCase();
+        var res = [];
+        donors.forEach(function(d){
+            var de = (d.email || '').trim().toLowerCase();
+            var dp = (d.phone || '').replace(/\D/g, '');
+            var byEmail = !!(em && de && de === em);
+            var byPhone = !!(ph && dp && dp === ph);
+            var byName  = !!(fn && ln && (d.firstName || '').trim().toLowerCase() === fn && (d.lastName || '').trim().toLowerCase() === ln);
+            if (byEmail || byPhone || byName){
+                res.push({ d: d, on: [byEmail ? 'email' : null, byPhone ? 'phone' : null, byName ? 'name' : null].filter(Boolean).join(', ') });
+            }
+        });
+        return res;
+    }
+    function createDonorRecord(f){
+        var nd = { id: nextSeqId('DON', donors), firstName: f.firstName, lastName: f.lastName, phone: f.phone, email: f.email, address: f.address, suburb: f.suburb, postcode: f.postcode, xeroRef: f.xeroRef, total: 0, count: 0 };
+        donors.push(nd);
+        audit('donor_created', 'Added donor "' + f.firstName + ' ' + f.lastName + '"', 'Phone: ' + f.phone + ' · Email: ' + f.email);
+        saveToStorage(); updateDonorDatalist(); renderDonors(); closeDonorModal(); closeDonorMatchPrompt();
+        if (syncConfig.enabled && syncConfig.url) pushDirectoryToCloud('Donors', buildDonorPayload(nd));
+        showToast('Donor "' + f.firstName + ' ' + f.lastName + '" added.', 'emerald');
+    }
+    function mergeIntoDonor(existingId){
+        var f = _newDonorDraft; if (!f) return;
+        var d = donors.find(function(x){ return String(x.id) === String(existingId); });
+        if (!d) return;
+        d.firstName = d.firstName || f.firstName;
+        d.lastName  = d.lastName  || f.lastName;
+        d.email     = f.email     || d.email;
+        d.phone     = f.phone     || d.phone;
+        d.address   = f.address   || d.address;
+        d.suburb    = f.suburb    || d.suburb;
+        d.postcode  = f.postcode  || d.postcode;
+        d.xeroRef   = f.xeroRef   || d.xeroRef;
+        audit('donor_merged', 'Merged into existing donor "' + d.firstName + ' ' + d.lastName + '"', 'Email: ' + (d.email || ''));
+        saveToStorage(); updateDonorDatalist(); renderDonors(); closeDonorModal(); closeDonorMatchPrompt();
+        if (syncConfig.enabled && syncConfig.url) pushDirectoryToCloud('Donors', buildDonorPayload(d));
+        showToast('Updated existing donor "' + d.firstName + ' ' + d.lastName + '" — no duplicate created.', 'emerald');
+    }
+    function confirmAddNewDonor(){ if (_newDonorDraft) createDonorRecord(_newDonorDraft); }
+    function closeDonorMatchPrompt(){ var m = document.getElementById('donor-match-modal'); if (m) m.remove(); _newDonorDraft = null; }
+    function showDonorMatchPrompt(f, matches){
+        _newDonorDraft = f;
+        var m = document.createElement('div');
+        m.id = 'donor-match-modal';
+        m.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.6);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px';
+        function cmp(lbl, a, bb){
+            var na = escHtml(a || '—'), nb = escHtml(bb || '—');
+            var diff = (String(a || '').trim().toLowerCase() !== String(bb || '').trim().toLowerCase());
+            return '<tr><td style="color:#94a3b8;padding:3px 8px 3px 0;font-size:11px;white-space:nowrap">' + lbl + '</td>' +
+                   '<td style="padding:3px 8px;font-size:12px;' + (diff ? 'background:#fef9c3;border-radius:4px' : '') + '">' + na + '</td>' +
+                   '<td style="padding:3px 8px;font-size:12px;color:#475569">' + nb + '</td></tr>';
+        }
+        var blocks = matches.map(function(mm){
+            var d = mm.d;
+            return '<div style="border:1px solid #fcd34d;background:#fffbeb;border-radius:12px;padding:12px;margin-top:10px">' +
+                '<div style="font-size:11.5px;font-weight:800;color:#b45309">Possible existing donor — matched on ' + escHtml(mm.on) + '</div>' +
+                '<table style="width:100%;border-collapse:collapse;margin-top:8px">' +
+                  '<tr><td></td><td style="font-size:10px;color:#94a3b8;font-weight:700">YOU ENTERED</td><td style="font-size:10px;color:#94a3b8;font-weight:700">ON FILE</td></tr>' +
+                  cmp('Name', f.firstName + ' ' + f.lastName, (d.firstName || '') + ' ' + (d.lastName || '')) +
+                  cmp('Email', f.email, d.email) +
+                  cmp('Phone', f.phone, d.phone) +
+                  cmp('Address', [f.address, f.suburb, f.postcode].filter(Boolean).join(', '), [d.address, d.suburb, d.postcode].filter(Boolean).join(', ')) +
+                '</table>' +
+                '<div style="font-size:11px;color:#475569;margin-top:6px">On file: ' + (d.count || 0) + ' donation(s), total $' + (Number(d.total) || 0).toFixed(2) + '</div>' +
+                '<button onclick="mergeIntoDonor(\'' + d.id + '\')" style="width:100%;margin-top:8px;background:#2563eb;color:#fff;border:none;padding:9px;border-radius:10px;font-weight:700;cursor:pointer">Update this donor (merge)</button>' +
+              '</div>';
+        }).join('');
+        m.innerHTML = '<div style="background:#fff;border-radius:18px;max-width:560px;width:100%;max-height:85vh;overflow:auto;padding:22px;font-family:Arial,sans-serif">' +
+            '<div style="font-size:18px;font-weight:900;color:#0f172a;margin-bottom:6px">This donor may already exist</div>' +
+            '<div style="font-size:12.5px;color:#475569;margin-bottom:6px">Compare and choose — update the existing record, or add as a new donor.</div>' +
+            blocks +
+            '<div style="display:flex;gap:8px;margin-top:14px">' +
+              '<button onclick="confirmAddNewDonor()" style="flex:1;background:#059669;color:#fff;border:none;padding:10px;border-radius:10px;font-weight:700;cursor:pointer">Add as a NEW donor</button>' +
+              '<button onclick="closeDonorMatchPrompt()" style="flex:1;background:#f1f5f9;color:#475569;border:none;padding:10px;border-radius:10px;font-weight:700;cursor:pointer">Cancel</button>' +
+            '</div></div>';
+        document.body.appendChild(m);
+    }
+
+    /* ════════════ Fast in-browser refresh for the Pending sign-ups list ════════════ */
+    var _pendingList = [];
+    function clientDonorMatches(s){
+        var em = String(s.email || '').trim().toLowerCase();
+        var ph = String(s.phone || '').replace(/\D/g, '');
+        var fn = String(s.firstName || '').trim().toLowerCase();
+        var ln = String(s.lastName || '').trim().toLowerCase();
+        var out = [];
+        donors.forEach(function(d){
+            var de = String(d.email || '').trim().toLowerCase(), dp = String(d.phone || '').replace(/\D/g, '');
+            var byEmail = !!(em && de && de === em);
+            var byPhone = !!(ph && dp && dp === ph);
+            var byName  = !!(fn && ln && String(d.firstName || '').trim().toLowerCase() === fn && String(d.lastName || '').trim().toLowerCase() === ln);
+            if (byEmail || byPhone || byName){
+                out.push({ id:d.id, firstName:d.firstName || '', lastName:d.lastName || '', email:d.email || '', phone:d.phone || '',
+                           address:d.address || '', suburb:d.suburb || '', postcode:d.postcode || '',
+                           total:Number(d.total) || 0, count:Number(d.count) || 0,
+                           on:[byEmail ? 'email' : null, byPhone ? 'phone' : null, byName ? 'name' : null].filter(Boolean).join(', ') });
+            }
+        });
+        return out;
+    }
+    function clientPendingDupes(s, list){
+        var out = [];
+        list.forEach(function(o){
+            if (o.signupId === s.signupId) return;
+            var ae = String(s.email || '').trim().toLowerCase(), be = String(o.email || '').trim().toLowerCase();
+            var ap = String(s.phone || '').replace(/\D/g, ''), bp = String(o.phone || '').replace(/\D/g, '');
+            var an = String(s.firstName || '').trim().toLowerCase() + '|' + String(s.lastName || '').trim().toLowerCase();
+            var bn = String(o.firstName || '').trim().toLowerCase() + '|' + String(o.lastName || '').trim().toLowerCase();
+            var byEmail = !!(ae && be && ae === be), byPhone = !!(ap && bp && ap === bp), byName = !!(an !== '|' && an === bn);
+            if (byEmail || byPhone || byName) out.push({ signupId:o.signupId, name:((o.firstName || '') + ' ' + (o.lastName || '')).trim() });
+        });
+        return out;
+    }
+    function recomputePending(list){
+        list.forEach(function(s){ s.matches = clientDonorMatches(s); s.pendingDupes = clientPendingDupes(s, list); });
+    }
 
     window.onload = init;
 </script>
