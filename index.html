@@ -6201,22 +6201,9 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
         else { alert('Setup did not complete: ' + ((data && data.error) || 'unknown error') + ((data && data.error==='already_initialised') ? ' (an admin already exists)' : '')); }
     }
 
-    // First-time setup link on the login screen
-    (function(){
-        try {
-            var s1 = document.getElementById('login-step-1');
-            if (s1 && !document.getElementById('first-setup-link')){
-                var a = document.createElement('a');
-                a.id='first-setup-link'; a.href='javascript:void(0)';
-                a.textContent='First-time setup (create the first admin)';
-                a.style.cssText='font-size:12px;color:rgba(255,255,255,0.45)';
-                a.onclick = firstTimeSetup;
-                var wrap = document.createElement('div');
-                wrap.style.cssText='text-align:center;margin-top:14px';
-                wrap.appendChild(a); s1.appendChild(wrap);
-            }
-        } catch(e){}
-    })();
+    // First-time setup link removed — the first admin has been created.
+    // (The firstTimeSetup() function is still defined; it can be called from the browser
+    //  console if a brand-new environment ever needs its first admin bootstrapped.)
 
     window.onload = init;
 </script>
