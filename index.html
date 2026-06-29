@@ -6223,20 +6223,45 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
             m.onclick = function(ev){ if (ev.target === m) m.remove(); };
             document.body.appendChild(m);
         }
+        function cmpRow(lbl, a, bb){
+            const na = escHtml(a || '—'), nb = escHtml(bb || '—');
+            const diff = (String(a || '').trim().toLowerCase() !== String(bb || '').trim().toLowerCase());
+            return '<tr><td style="color:#94a3b8;padding:3px 8px 3px 0;font-size:11px;white-space:nowrap">' + lbl + '</td>' +
+                   '<td style="padding:3px 8px;font-size:12px;' + (diff ? 'background:#fef9c3;border-radius:4px' : '') + '">' + na + '</td>' +
+                   '<td style="padding:3px 8px;font-size:12px;color:#475569">' + nb + '</td></tr>';
+        }
         const rowsHtml = list.map(function(s){
             const name = escHtml((s.firstName || '') + ' ' + (s.lastName || ''));
             const contact = escHtml([s.email, s.phone].filter(Boolean).join('  ·  '));
-            const addr = escHtml([s.address, s.suburb, s.postcode].filter(Boolean).join(', '));
-            return '<div style="border:1px solid #e2e8f0;border-radius:14px;padding:14px;margin-bottom:10px">' +
-                     '<div style="font-weight:800">' + name + '</div>' +
+            const addr = [s.address, s.suburb, s.postcode].filter(Boolean).join(', ');
+            const matches = s.matches || [];
+            const matchHtml = matches.map(function(mm){
+                const mAddr = [mm.address, mm.suburb, mm.postcode].filter(Boolean).join(', ');
+                return '<div style="border:1px solid #fcd34d;background:#fffbeb;border-radius:12px;padding:12px;margin-top:10px">' +
+                    '<div style="font-size:11.5px;font-weight:800;color:#b45309">Possible existing donor — matched on ' + escHtml(mm.on || '') + '</div>' +
+                    '<table style="width:100%;border-collapse:collapse;margin-top:8px">' +
+                      '<tr><td></td><td style="font-size:10px;color:#94a3b8;font-weight:700">NEW SIGN-UP</td><td style="font-size:10px;color:#94a3b8;font-weight:700">ON FILE</td></tr>' +
+                      cmpRow('Name', (s.firstName || '') + ' ' + (s.lastName || ''), (mm.firstName || '') + ' ' + (mm.lastName || '')) +
+                      cmpRow('Email', s.email, mm.email) +
+                      cmpRow('Phone', s.phone, mm.phone) +
+                      cmpRow('Address', addr, mAddr) +
+                    '</table>' +
+                    '<div style="font-size:11px;color:#475569;margin-top:6px">On file: ' + (mm.count || 0) + ' donation(s), total $' + (Number(mm.total) || 0).toFixed(2) + '</div>' +
+                    '<button onclick="approveSignup(\'' + s.signupId + '\',\'update\',\'' + mm.id + '\')" style="width:100%;margin-top:8px;background:#2563eb;color:#fff;border:none;padding:9px;border-radius:10px;font-weight:700;cursor:pointer">Update this donor (merge)</button>' +
+                  '</div>';
+            }).join('');
+            return '<div style="border:1px solid #e2e8f0;border-radius:14px;padding:14px;margin-bottom:12px">' +
+                     '<div style="font-weight:800">' + name + ' <span style="font-size:10px;background:#dbeafe;color:#1d4ed8;padding:2px 7px;border-radius:99px;font-weight:700">NEW</span></div>' +
                      '<div style="font-size:13px;color:#475569;margin-top:2px">' + (contact || '—') + '</div>' +
-                     (addr ? '<div style="font-size:12px;color:#94a3b8;margin-top:2px">' + addr + '</div>' : '') +
-                     '<div style="display:flex;gap:8px;margin-top:10px">' +
-                       '<button onclick="approveSignup(\'' + s.signupId + '\')" style="flex:1;background:#059669;color:#fff;border:none;padding:9px;border-radius:10px;font-weight:700;cursor:pointer">Approve</button>' +
+                     (addr ? '<div style="font-size:12px;color:#94a3b8;margin-top:2px">' + escHtml(addr) + '</div>' : '') +
+                     (matches.length ? '<div style="font-size:11px;color:#b45309;font-weight:700;margin-top:10px">⚠ ' + matches.length + ' possible existing match' + (matches.length > 1 ? 'es' : '') + ' — compare and choose:</div>' : '') +
+                     matchHtml +
+                     '<div style="display:flex;gap:8px;margin-top:12px">' +
+                       '<button onclick="approveSignup(\'' + s.signupId + '\',\'new\')" style="flex:1;background:#059669;color:#fff;border:none;padding:9px;border-radius:10px;font-weight:700;cursor:pointer">' + (matches.length ? 'Add as NEW donor' : 'Approve') + '</button>' +
                        '<button onclick="rejectSignup(\'' + s.signupId + '\')" style="flex:1;background:#f1f5f9;color:#475569;border:none;padding:9px;border-radius:10px;font-weight:700;cursor:pointer">Reject</button>' +
                      '</div></div>';
         }).join('');
-        m.innerHTML = '<div style="background:#fff;border-radius:18px;max-width:460px;width:100%;max-height:80vh;overflow:auto;padding:22px;font-family:Arial,sans-serif">' +
+        m.innerHTML = '<div style="background:#fff;border-radius:18px;max-width:560px;width:100%;max-height:85vh;overflow:auto;padding:22px;font-family:Arial,sans-serif">' +
             '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">' +
               '<div style="font-size:18px;font-weight:900;color:#0f172a">Pending donor sign-ups</div>' +
               '<button onclick="document.getElementById(\'pending-signups-modal\').remove()" style="background:none;border:none;font-size:24px;line-height:1;cursor:pointer;color:#94a3b8">&times;</button>' +
@@ -6244,10 +6269,18 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
             (list.length ? rowsHtml : '<div style="text-align:center;color:#94a3b8;padding:24px">No pending sign-ups right now.</div>') +
             '</div>';
     }
-    async function approveSignup(id){
-        const d = await apiPost({ action:'approve_signup', session: sessionToken, signupId: id });
-        if (d && d.ok){ showToast('Added to the Donor Directory.', 'emerald'); try { audit('signup_approved', 'Approved a donor sign-up', ''); } catch(e){} await pullFromCloud(); await openPendingSignups(); }
-        else showToast('Could not approve that sign-up.', 'red');
+    async function approveSignup(id, mode, donorId){
+        const d = await apiPost({ action:'approve_signup', session: sessionToken, signupId: id, mode: mode || 'new', donorId: donorId || '' });
+        if (d && d.ok){
+            if (d.donor){
+                donors = donors.filter(function(x){ return String(x.id) !== String(d.donor.id); }).concat([d.donor]);
+                try { safeStorage.setItem('ssmvp_donors', JSON.stringify(donors)); } catch(e){}
+                renderDonors(); updateDonorDatalist();
+            }
+            showToast(d.updated ? 'Existing donor updated — no duplicate created.' : 'Added to the Donor Directory.', 'emerald');
+            try { audit('signup_approved', 'Approved a donor sign-up (' + (d.updated ? 'merged into existing' : 'new') + ')', ''); } catch(e){}
+            await openPendingSignups();
+        } else showToast('Could not approve that sign-up.', 'red');
     }
     async function rejectSignup(id){
         const d = await apiPost({ action:'reject_signup', session: sessionToken, signupId: id });
