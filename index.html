@@ -6557,8 +6557,7 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
     (function(){
         function mkSelect(opts, val, onChange){
             var sel = document.createElement('select');
-            sel.className = 'custom-select text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 px-4 py-4 rounded-3xl cursor-pointer';
-            sel.style.border = '0';
+            sel.className = 'custom-select pl-5 pr-10 py-3 bg-zinc-50 border border-slate-200 hover:border-slate-300 rounded-2xl text-sm font-medium text-slate-600 cursor-pointer';
             sel.innerHTML = opts; sel.value = val;
             sel.onchange = function(){ onChange(sel.value); };
             return sel;
