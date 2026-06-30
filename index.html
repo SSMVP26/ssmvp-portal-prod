@@ -502,6 +502,12 @@
                                     class="input-focus w-full px-6 py-4 bg-zinc-50 border border-slate-200 rounded-2xl font-medium font-mono"
                                     placeholder="e.g. INV-0042">
                             </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-xs font-bold text-slate-500 mb-2 tracking-widest">IN HONOUR OF <span class="text-slate-400 font-normal normal-case">(optional — e.g. a child's name for a birthday donation)</span></label>
+                                <input id="in-honour-of" type="text"
+                                    class="input-focus w-full px-6 py-4 bg-zinc-50 border border-slate-200 rounded-2xl font-medium"
+                                    placeholder="e.g. Aarav's 5th birthday">
+                            </div>
                         </div>
                     </div>
 
@@ -530,8 +536,8 @@
                                     placeholder="Organisation name">
                             </div>
                             <div>
-                                <label class="block text-xs font-bold text-slate-500 mb-2 tracking-widest">ABN <span class="text-red-400">*</span></label>
-                                <input id="in-org-abn" required type="text"
+                                <label class="block text-xs font-bold text-slate-500 mb-2 tracking-widest">ABN <span class="text-slate-400 font-normal normal-case">(optional)</span></label>
+                                <input id="in-org-abn" type="text"
                                     class="input-focus w-full px-6 py-4 bg-zinc-50 border border-slate-200 rounded-2xl font-medium font-mono"
                                     placeholder="12 345 678 901">
                             </div>
@@ -1569,8 +1575,8 @@
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-bold text-slate-500 mb-2 tracking-widest">ABN <span class="text-red-400">*</span></label>
-                        <input id="modal-org-abn" required type="text" placeholder="12 345 678 901"
+                        <label class="block text-xs font-bold text-slate-500 mb-2 tracking-widest">ABN <span class="text-slate-400 font-normal normal-case">(optional)</span></label>
+                        <input id="modal-org-abn" type="text" placeholder="12 345 678 901"
                             class="input-focus w-full px-5 py-4 bg-zinc-50 border border-slate-200 rounded-2xl font-medium font-mono">
                     </div>
                     <div>
@@ -1837,6 +1843,32 @@
     // (Production build — no environment banner.)
 
     let entries    = JSON.parse(safeStorage.getItem('ssmvp_entries')  || '[]');
+
+    /* ───── Directory + ledger sorting (added) ───── */
+    var dirSort = { donors:'az', orgs:'az', vendors:'az' };
+    var dirView = { donors:'cards', orgs:'cards', vendors:'cards' };
+    var ledgerSort = 'date';
+    function applyDirSort(arr, which, getName, getDate){
+        var d = dirSort[which] || 'az';
+        if (d === 'recent' && getDate){
+            arr.sort(function(a,b){ return new Date(getDate(b)||0) - new Date(getDate(a)||0); });
+        } else {
+            arr.sort(function(a,b){ var r = String(getName(a)||'').localeCompare(String(getName(b)||''), undefined, {sensitivity:'base'}); return d === 'za' ? -r : r; });
+        }
+        return arr;
+    }
+    function ledgerEntryName(e){
+        if (e.type === 'income') return (e.donorType === 'org' ? (e.orgName || e.firstName || '') : ((e.firstName||'') + ' ' + (e.lastName||'')));
+        return e.vendorName || '';
+    }
+    function applyLedgerSort(arr){
+        var s = ledgerSort || 'date';
+        if (s === 'name-az') arr.sort(function(a,b){ return ledgerEntryName(a).localeCompare(ledgerEntryName(b), undefined, {sensitivity:'base'}); });
+        else if (s === 'name-za') arr.sort(function(a,b){ return ledgerEntryName(b).localeCompare(ledgerEntryName(a), undefined, {sensitivity:'base'}); });
+        else if (s === 'amount') arr.sort(function(a,b){ return (b.amount||0) - (a.amount||0); });
+        else arr.sort(function(a,b){ return new Date(b.date) - new Date(a.date); });
+        return arr;
+    }
     let donors     = JSON.parse(safeStorage.getItem('ssmvp_donors')   || '[]');
     let vendors    = JSON.parse(safeStorage.getItem('ssmvp_vendors')  || '[]');
     let santos     = JSON.parse(safeStorage.getItem('ssmvp_santos')   || '[{"id":"SAN_001","name":"P.P. Gyanjivandasji Swami","title":"Vadtal Dham"},{"id":"SAN_002","name":"P.P. Bhaktiharidasji Swami","title":"Vadtal Dham"}]');
@@ -2389,7 +2421,7 @@
                 const orgContact = document.getElementById('in-org-contact').value.trim();
                 if (!orgName)  { showToast('Please enter the Organisation Name.', 'red'); return; }
                 if (!orgEmail) { showToast('Please enter the Organisation Email.', 'red'); return; }
-                if (!orgAbn)   { showToast('Please enter the ABN.', 'red'); return; }
+                // ABN is optional for organisation donations (mandatory check removed)
 
                 let org = null;
                 const linkedId = document.getElementById('in-org-id').value;
@@ -2441,6 +2473,7 @@
                 if (!phone) { showToast('Please enter the donor\'s Phone Number.', 'red'); return; }
                 if (!email || !/\S+@\S+\.\S+/.test(email)) { showToast('Please enter a valid Email Address.', 'red'); return; }
 
+                entry.inHonourOf = (document.getElementById('in-honour-of') ? document.getElementById('in-honour-of').value.trim() : '');
                 const donor = findOrCreateDonor(fname, lname, email, phone);
                 entry.donorId   = donor.id;
                 entry.firstName = donor.firstName;
@@ -2710,6 +2743,7 @@
                 amount:       entry.amount.toFixed(2),
                 method:       entry.method       || '',
                 reference:    entry.ref          || '',
+                inHonourOf:   entry.inHonourOf   || '',
                 recordedBy:   entry.recordedBy   || (currentUser ? currentUser.name : 'Unknown')
             };
         } else {
@@ -2987,6 +3021,7 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
             '{category}':      entry.category   || '',
             '{subcategory}':   entry.subcategory|| '',
             '{method}':        entry.method     || '',
+            '{in_honour_of}':  entry.inHonourOf || '',
             '{receipt_number}':invoiceNo
         };
         Object.entries(replacements).forEach(([k, v]) => {
@@ -3086,6 +3121,32 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
             lucide.createIcons();
             return;
         }
+        applyDirSort(filtered, 'donors', function(d){ return (d.firstName||'') + ' ' + (d.lastName||''); }, function(d){ return d.firstAdded; });
+        grid.className = (dirView.donors === 'list') ? 'flex flex-col gap-2.5' : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6';
+        if (dirView.donors === 'list') {
+            filtered.forEach(d => {
+                const row = document.createElement('div');
+                row.className = 'flex items-center gap-4 bg-white rounded-2xl border border-slate-100 px-5 py-3.5 hover:border-slate-200 transition-all';
+                row.innerHTML = `
+                    <div class="w-10 h-10 shrink-0 bg-orange-100 text-orange-600 rounded-xl flex items-center justify-center font-black text-sm">${escHtml((d.firstName||'').charAt(0))}${escHtml((d.lastName||'').charAt(0))}</div>
+                    <div class="min-w-0 flex-1">
+                        <div class="font-bold text-sm truncate">${escHtml(d.firstName)} ${escHtml(d.lastName)}</div>
+                        <div class="text-xs text-slate-400 truncate">${escHtml(d.email) || escHtml(d.phone) || 'No contact'}</div>
+                    </div>
+                    <div class="text-right shrink-0 hidden sm:block">
+                        <div class="font-black text-sm text-slate-900">$${(d.total||0).toLocaleString('en-AU',{minimumFractionDigits:2})}</div>
+                        <div class="text-[10px] text-slate-400 font-semibold">${d.count||0} donation${(d.count||0)!==1?'s':''}</div>
+                    </div>
+                    <div class="flex gap-1 shrink-0">
+                        <button onclick="openDonorModal('${d.id}')" title="Edit donor" class="bg-slate-100 hover:bg-amber-50 hover:text-amber-600 text-slate-600 p-2 rounded-lg transition-all"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i></button>
+                        <button onclick="deleteDonor('${d.id}')" title="Remove donor" class="bg-slate-100 hover:bg-red-50 hover:text-red-600 text-slate-600 p-2 rounded-lg transition-all"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                        <button onclick="prefillDonation('${d.id}')" title="New donation" class="bg-slate-950 hover:bg-orange-500 text-white p-2 rounded-lg transition-all"><i data-lucide="plus-circle" class="w-3.5 h-3.5"></i></button>
+                    </div>`;
+                grid.appendChild(row);
+            });
+            lucide.createIcons();
+            return;
+        }
         filtered.forEach(d => {
             const card = document.createElement('div');
             card.className = "card bg-white rounded-3xl border border-slate-100 overflow-hidden";
@@ -3160,6 +3221,32 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
                     <i data-lucide="plus" class="w-4 h-4"></i> Add First Vendor
                 </button>
             </div>`;
+            lucide.createIcons();
+            return;
+        }
+        applyDirSort(filtered, 'vendors', function(v){ return v.name; }, function(v){ return v.firstAdded; });
+        grid.className = (dirView.vendors === 'list') ? 'flex flex-col gap-2.5' : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6';
+        if (dirView.vendors === 'list') {
+            filtered.forEach(v => {
+                const row = document.createElement('div');
+                row.className = 'flex items-center gap-4 bg-white rounded-2xl border border-slate-100 px-5 py-3.5 hover:border-slate-200 transition-all';
+                row.innerHTML = `
+                    <div class="w-10 h-10 shrink-0 bg-red-100 text-red-600 rounded-xl flex items-center justify-center font-black text-sm">${escHtml((v.name||'?').charAt(0).toUpperCase())}</div>
+                    <div class="min-w-0 flex-1">
+                        <div class="font-bold text-sm truncate">${escHtml(v.name)}</div>
+                        <div class="text-xs text-slate-400 truncate">${escHtml(v.email) || escHtml(v.phone) || 'No contact'}</div>
+                    </div>
+                    <div class="text-right shrink-0 hidden sm:block">
+                        <div class="font-black text-sm text-slate-900">$${(v.total||0).toLocaleString('en-AU',{minimumFractionDigits:2})}</div>
+                        <div class="text-[10px] text-slate-400 font-semibold">${v.count||0} transaction${(v.count||0)!==1?'s':''}</div>
+                    </div>
+                    <div class="flex gap-1 shrink-0">
+                        <button onclick="openVendorModal('${v.id}')" title="Edit vendor" class="bg-slate-100 hover:bg-amber-50 hover:text-amber-600 text-slate-600 p-2 rounded-lg transition-all"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i></button>
+                        <button onclick="deleteVendor('${v.id}')" title="Remove vendor" class="bg-slate-100 hover:bg-red-50 hover:text-red-600 text-slate-600 p-2 rounded-lg transition-all"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                        <button onclick="prefillExpense('${v.id}')" title="New expense" class="bg-slate-950 hover:bg-red-500 text-white p-2 rounded-lg transition-all"><i data-lucide="plus-circle" class="w-3.5 h-3.5"></i></button>
+                    </div>`;
+                grid.appendChild(row);
+            });
             lucide.createIcons();
             return;
         }
@@ -3834,6 +3921,7 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
             filtered = filtered.filter(e => { const d = new Date(e.date); return d >= new Date(from) && d <= new Date(to); });
         }
 
+        filtered = applyLedgerSort(filtered.slice());
         const body = document.getElementById('ledger-body');
         body.innerHTML = '';
         const isAdmin = currentUser && currentUser.role === 'admin';
@@ -3869,6 +3957,7 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
                                 : escHtml(e.vendorName || '—')}
                         </div>
                         <div class="text-xs text-slate-400">${e.type === 'income' ? (e.donorType === 'org' ? (e.orgAbn ? 'ABN: ' + escHtml(e.orgAbn) : (e.email || '')) : (e.email || '')) : (e.phone || '')}</div>
+                        ${e.type === 'income' && e.inHonourOf ? `<div class="text-xs text-pink-600 font-semibold mt-0.5">In honour of: ${escHtml(e.inHonourOf)}</div>` : ''}
                         ${e.type === 'expense' && e.paidBy ? `<div class="text-xs text-amber-600 font-semibold mt-0.5">Paid by: ${escHtml(e.paidBy)}${e.reimbursedTo && e.reimbursedTo !== e.paidBy ? ' → Reimburse: ' + escHtml(e.reimbursedTo) : ''}</div>` : ''}
                     </td>
                     <td class="px-8 py-5">
@@ -5128,6 +5217,32 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
             lucide.createIcons(); return;
         }
 
+        applyDirSort(filtered, 'orgs', function(o){ return o.name; }, function(o){ return o.firstAdded; });
+        grid.className = (dirView.orgs === 'list') ? 'flex flex-col gap-2.5' : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6';
+        if (dirView.orgs === 'list') {
+            filtered.forEach(o => {
+                const row = document.createElement('div');
+                row.className = 'flex items-center gap-4 bg-white rounded-2xl border border-slate-100 px-5 py-3.5 hover:border-slate-200 transition-all';
+                row.innerHTML = `
+                    <div class="w-10 h-10 shrink-0 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center font-black text-sm">${escHtml((o.name||'?').charAt(0).toUpperCase())}</div>
+                    <div class="min-w-0 flex-1">
+                        <div class="font-bold text-sm truncate">${escHtml(o.name)}</div>
+                        <div class="text-xs text-slate-400 truncate">${o.abn ? 'ABN: ' + escHtml(o.abn) : (escHtml(o.email) || escHtml(o.contactPerson) || 'No details')}</div>
+                    </div>
+                    <div class="text-right shrink-0 hidden sm:block">
+                        <div class="font-black text-sm text-slate-900">$${(o.total||0).toLocaleString('en-AU',{minimumFractionDigits:2})}</div>
+                        <div class="text-[10px] text-slate-400 font-semibold">${o.count||0} donation${(o.count||0)!==1?'s':''}</div>
+                    </div>
+                    <div class="flex gap-1 shrink-0">
+                        <button onclick="openOrgModal('${o.id}')" title="Edit organisation" class="bg-slate-100 hover:bg-amber-50 hover:text-amber-600 text-slate-600 p-2 rounded-lg transition-all"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i></button>
+                        <button onclick="deleteOrg('${o.id}')" title="Remove organisation" class="bg-slate-100 hover:bg-red-50 hover:text-red-600 text-slate-600 p-2 rounded-lg transition-all"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                        <button onclick="prefillOrgDonation('${o.id}')" title="New donation" class="bg-slate-950 hover:bg-indigo-500 text-white p-2 rounded-lg transition-all"><i data-lucide="plus-circle" class="w-3.5 h-3.5"></i></button>
+                    </div>`;
+                grid.appendChild(row);
+            });
+            lucide.createIcons();
+            return;
+        }
         filtered.forEach(o => {
             const total = o.total || 0;
             const count = o.count || 0;
@@ -6437,6 +6552,41 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
     function recomputePending(list){
         list.forEach(function(s){ s.matches = clientDonorMatches(s); s.pendingDupes = clientPendingDupes(s, list); });
     }
+
+    // Inject sort controls (directories + ledger) — A–Z default for directories.
+    (function(){
+        function mkSelect(opts, val, onChange){
+            var sel = document.createElement('select');
+            sel.className = 'custom-select text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 px-4 py-4 rounded-3xl cursor-pointer';
+            sel.style.border = '0';
+            sel.innerHTML = opts; sel.value = val;
+            sel.onchange = function(){ onChange(sel.value); };
+            return sel;
+        }
+        function addDirSort(searchId, which, renderFn){
+            try{
+                var inp = document.getElementById(searchId); if (!inp) return;
+                var wrap = inp.closest('.relative') || inp.parentNode;
+                var container = wrap.parentNode; if (!container) return;
+                if (container.querySelector('.dir-sort')) return;
+                var sw = document.createElement('div'); sw.className = 'dir-sort flex items-center gap-2';
+                sw.appendChild(mkSelect('<option value="cards">Cards</option><option value="list">List</option>', dirView[which]||'cards', function(v){ dirView[which]=v; renderFn(); }));
+                sw.appendChild(mkSelect('<option value="az">Name A–Z</option><option value="za">Name Z–A</option><option value="recent">Recently added</option>', dirSort[which]||'az', function(v){ dirSort[which]=v; renderFn(); }));
+                container.insertBefore(sw, wrap.nextSibling);
+            }catch(e){}
+        }
+        addDirSort('donor-search', 'donors', renderDonors);
+        addDirSort('org-search', 'orgs', renderOrgs);
+        addDirSort('vendor-search', 'vendors', renderVendors);
+        try{
+            var rt = document.getElementById('report-type');
+            if (rt && !document.getElementById('ledger-sort')){
+                var ls = mkSelect('<option value="date">Date (newest)</option><option value="name-az">Name A–Z</option><option value="name-za">Name Z–A</option><option value="amount">Amount (high→low)</option>', ledgerSort, function(v){ ledgerSort=v; renderLedger(); });
+                ls.id = 'ledger-sort';
+                rt.parentNode.insertBefore(ls, rt.nextSibling);
+            }
+        }catch(e){}
+    })();
 
     window.onload = init;
 </script>
