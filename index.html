@@ -159,7 +159,6 @@
                 </div>
                 <div id="login-step1-error" style="display:none;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);border-radius:12px;padding:10px 14px;color:#fca5a5;font-size:13px;font-weight:600"></div>
                 <button class="login-btn" onclick="loginStep1()" style="margin-top:6px">Continue →</button>
-                <div style="text-align:center;margin-top:14px"><a onclick="openForgotPassword()" style="color:rgba(255,255,255,0.55);font-size:13px;font-weight:600;cursor:pointer;text-decoration:underline">Forgot password?</a></div>
                 <!-- Sign in with Google -->
                 <div id="google-divider" style="display:flex;align-items:center;gap:12px;margin:18px 0 14px">
                     <div style="flex:1;height:1px;background:rgba(255,255,255,0.12)"></div>
@@ -503,12 +502,6 @@
                                     class="input-focus w-full px-6 py-4 bg-zinc-50 border border-slate-200 rounded-2xl font-medium font-mono"
                                     placeholder="e.g. INV-0042">
                             </div>
-                            <div class="md:col-span-2">
-                                <label class="block text-xs font-bold text-slate-500 mb-2 tracking-widest">IN HONOUR OF <span class="text-slate-400 font-normal normal-case">(optional — e.g. a child's name for a birthday donation)</span></label>
-                                <input id="in-honour-of" type="text"
-                                    class="input-focus w-full px-6 py-4 bg-zinc-50 border border-slate-200 rounded-2xl font-medium"
-                                    placeholder="e.g. Aarav's 5th birthday">
-                            </div>
                         </div>
                     </div>
 
@@ -537,8 +530,8 @@
                                     placeholder="Organisation name">
                             </div>
                             <div>
-                                <label class="block text-xs font-bold text-slate-500 mb-2 tracking-widest">ABN <span class="text-slate-400 font-normal normal-case">(optional)</span></label>
-                                <input id="in-org-abn" type="text"
+                                <label class="block text-xs font-bold text-slate-500 mb-2 tracking-widest">ABN <span class="text-red-400">*</span></label>
+                                <input id="in-org-abn" required type="text"
                                     class="input-focus w-full px-6 py-4 bg-zinc-50 border border-slate-200 rounded-2xl font-medium font-mono"
                                     placeholder="12 345 678 901">
                             </div>
@@ -865,7 +858,7 @@
                 <div class="flex items-center gap-3">
                     <div class="relative w-full md:w-72">
                         <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400"></i>
-                        <input type="text" id="donor-search" onkeyup="renderDonors()" placeholder="Search donors..." class="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-3xl focus:outline-none focus:border-orange-500 font-medium">
+                        <input type="text" id="donor-search" onkeyup="searchDonorsDebounced()" placeholder="Search donors..." class="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-3xl focus:outline-none focus:border-orange-500 font-medium">
                     </div>
                     <input type="file" id="donor-csv-input" accept=".csv,text/csv" class="hidden" onchange="handleDonorCsvSelected(event)">
                     <button onclick="triggerDonorImport()" class="flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold px-6 py-4 rounded-3xl text-sm transition-all whitespace-nowrap">
@@ -894,7 +887,7 @@
                 <div class="flex items-center gap-3">
                     <div class="relative w-full md:w-72">
                         <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400"></i>
-                        <input type="text" id="org-search" onkeyup="renderOrgs()" placeholder="Search organisations..." class="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-3xl focus:outline-none focus:border-indigo-500 font-medium">
+                        <input type="text" id="org-search" onkeyup="searchOrgsDebounced()" placeholder="Search organisations..." class="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-3xl focus:outline-none focus:border-indigo-500 font-medium">
                     </div>
                     <input type="file" id="org-csv-input" accept=".csv,text/csv" class="hidden" onchange="handleOrgCsvSelected(event)">
                     <button onclick="triggerOrgImport()" class="flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold px-6 py-4 rounded-3xl text-sm transition-all whitespace-nowrap">
@@ -930,7 +923,7 @@
                 <div class="flex items-center gap-3">
                     <div class="relative w-full md:w-72">
                         <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400"></i>
-                        <input type="text" id="vendor-search" onkeyup="renderVendors()" placeholder="Search vendors..." class="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-3xl focus:outline-none focus:border-red-500 font-medium">
+                        <input type="text" id="vendor-search" onkeyup="searchVendorsDebounced()" placeholder="Search vendors..." class="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-3xl focus:outline-none focus:border-red-500 font-medium">
                     </div>
                     <button onclick="openVendorModal()" class="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-4 rounded-3xl text-sm transition-all whitespace-nowrap">
                         <i data-lucide="plus" class="w-4 h-4"></i> Add Vendor
@@ -1576,8 +1569,8 @@
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-bold text-slate-500 mb-2 tracking-widest">ABN <span class="text-slate-400 font-normal normal-case">(optional)</span></label>
-                        <input id="modal-org-abn" type="text" placeholder="12 345 678 901"
+                        <label class="block text-xs font-bold text-slate-500 mb-2 tracking-widest">ABN <span class="text-red-400">*</span></label>
+                        <input id="modal-org-abn" required type="text" placeholder="12 345 678 901"
                             class="input-focus w-full px-5 py-4 bg-zinc-50 border border-slate-200 rounded-2xl font-medium font-mono">
                     </div>
                     <div>
@@ -1750,7 +1743,7 @@
     // Privacy policy: donor & financial data is NEVER written to the device.
     // It is held in memory for the session only and loaded live from Google Sheets.
     // ONLY staff login accounts persist locally, so sign-ins survive a page reload.
-    const LOCAL_PERSIST_KEYS = new Set(['ssmvp_users']);
+    const LOCAL_PERSIST_KEYS = new Set(['ssmvp_users', 'ssmvp_dirview']);
     const _memStore = {};
     let _localBacking = null;
     let isSandbox = false;
@@ -1770,8 +1763,9 @@
     // ====================== DATA ======================
     const categories = {
         income: {
-            "General Donation": ["Aarti Bhet", "Land Donation", "Mandir Construction", "Hall na yajman", "Food na yajman"],
+            "General Donation": ["Thal Bhet", "Aarti Bhet", "Land Donation", "Mandir Construction", "Hall na yajman", "Food na yajman"],
             "Santo Arrival": ["Rasoi Dhotiya", "Santo Bhet (Padhrmani)"],
+            "Gharshabha": ["Gharsabha Main Yajman", "Gharsabha Sah Yajman", "Shakotsav Main Yajman", "Shakotsav Sah Yajman", "Prasad-Rasoi Main Yajman", "Prasad-Rasoi Sah Yajman", "Hall Seva na Main Yajman", "Hall Seva na Sah Yajman"],
             "Clothing": ["Mens Kurta", "Women Dress", "Kids Kurta"],
             "Refund Received": ["Hall Hire Deposit Refund", "Utility Refund", "Insurance Refund", "Other Refund"],
             "Other": ["Sweet Selling", "Fundraising Event", "Merchandise", "Miscellaneous"]
@@ -1844,32 +1838,6 @@
     // (Production build — no environment banner.)
 
     let entries    = JSON.parse(safeStorage.getItem('ssmvp_entries')  || '[]');
-
-    /* ───── Directory + ledger sorting (added) ───── */
-    var dirSort = { donors:'az', orgs:'az', vendors:'az' };
-    var dirView = { donors:'cards', orgs:'cards', vendors:'cards' };
-    var ledgerSort = 'date';
-    function applyDirSort(arr, which, getName, getDate){
-        var d = dirSort[which] || 'az';
-        if (d === 'recent' && getDate){
-            arr.sort(function(a,b){ return new Date(getDate(b)||0) - new Date(getDate(a)||0); });
-        } else {
-            arr.sort(function(a,b){ var r = String(getName(a)||'').localeCompare(String(getName(b)||''), undefined, {sensitivity:'base'}); return d === 'za' ? -r : r; });
-        }
-        return arr;
-    }
-    function ledgerEntryName(e){
-        if (e.type === 'income') return (e.donorType === 'org' ? (e.orgName || e.firstName || '') : ((e.firstName||'') + ' ' + (e.lastName||'')));
-        return e.vendorName || '';
-    }
-    function applyLedgerSort(arr){
-        var s = ledgerSort || 'date';
-        if (s === 'name-az') arr.sort(function(a,b){ return ledgerEntryName(a).localeCompare(ledgerEntryName(b), undefined, {sensitivity:'base'}); });
-        else if (s === 'name-za') arr.sort(function(a,b){ return ledgerEntryName(b).localeCompare(ledgerEntryName(a), undefined, {sensitivity:'base'}); });
-        else if (s === 'amount') arr.sort(function(a,b){ return (b.amount||0) - (a.amount||0); });
-        else arr.sort(function(a,b){ return new Date(b.date) - new Date(a.date); });
-        return arr;
-    }
     let donors     = JSON.parse(safeStorage.getItem('ssmvp_donors')   || '[]');
     let vendors    = JSON.parse(safeStorage.getItem('ssmvp_vendors')  || '[]');
     let santos     = JSON.parse(safeStorage.getItem('ssmvp_santos')   || '[{"id":"SAN_001","name":"P.P. Gyanjivandasji Swami","title":"Vadtal Dham"},{"id":"SAN_002","name":"P.P. Bhaktiharidasji Swami","title":"Vadtal Dham"}]');
@@ -2153,6 +2121,7 @@
     const CAT_ICONS = {
         'General Donation': 'heart',
         'Santo Arrival':    'star',
+        'Gharshabha':       'home',
         'Clothing':         'shirt',
         'Refund Received':  'rotate-ccw',
         'Other':            'sparkles'
@@ -2374,6 +2343,8 @@
     // ====================== SUBMIT HANDLER ======================
     function handleFinanceSubmit(e, type) {
         e.preventDefault();
+        if (window.__finBusy) return;            // ignore rapid double-clicks → no duplicate entries
+        window.__finBusy = true; setTimeout(function(){ window.__finBusy = false; }, 900);
         const prefix = type === 'income' ? 'in' : 'ex';
 
         // ── JS Validation (replaces browser required since forms have novalidate) ──
@@ -2422,7 +2393,7 @@
                 const orgContact = document.getElementById('in-org-contact').value.trim();
                 if (!orgName)  { showToast('Please enter the Organisation Name.', 'red'); return; }
                 if (!orgEmail) { showToast('Please enter the Organisation Email.', 'red'); return; }
-                // ABN is optional for organisation donations (mandatory check removed)
+                if (!orgAbn)   { showToast('Please enter the ABN.', 'red'); return; }
 
                 let org = null;
                 const linkedId = document.getElementById('in-org-id').value;
@@ -2474,7 +2445,6 @@
                 if (!phone) { showToast('Please enter the donor\'s Phone Number.', 'red'); return; }
                 if (!email || !/\S+@\S+\.\S+/.test(email)) { showToast('Please enter a valid Email Address.', 'red'); return; }
 
-                entry.inHonourOf = (document.getElementById('in-honour-of') ? document.getElementById('in-honour-of').value.trim() : '');
                 const donor = findOrCreateDonor(fname, lname, email, phone);
                 entry.donorId   = donor.id;
                 entry.firstName = donor.firstName;
@@ -2744,7 +2714,6 @@
                 amount:       entry.amount.toFixed(2),
                 method:       entry.method       || '',
                 reference:    entry.ref          || '',
-                inHonourOf:   entry.inHonourOf   || '',
                 recordedBy:   entry.recordedBy   || (currentUser ? currentUser.name : 'Unknown')
             };
         } else {
@@ -3022,7 +2991,6 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
             '{category}':      entry.category   || '',
             '{subcategory}':   entry.subcategory|| '',
             '{method}':        entry.method     || '',
-            '{in_honour_of}':  entry.inHonourOf || '',
             '{receipt_number}':invoiceNo
         };
         Object.entries(replacements).forEach(([k, v]) => {
@@ -3102,9 +3070,69 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
     }
 
     // ====================== DONOR DIRECTORY ======================
+    // ============ DIRECTORY VIEW MODE (List default · Card optional) ============
+    // Applies to all directory modules (Donor, Sant, Vendor, Org). Default = list.
+    let dirView = { donors: 'list', santos: 'list', vendors: 'list', orgs: 'list' };
+    (function loadDirView() {
+        try {
+            const saved = JSON.parse(safeStorage.getItem('ssmvp_dirview') || '{}');
+            if (saved && typeof saved === 'object') {
+                ['donors', 'santos', 'vendors', 'orgs'].forEach(k => {
+                    if (saved[k] === 'card' || saved[k] === 'list') dirView[k] = saved[k];
+                });
+            }
+        } catch (e) { /* keep defaults */ }
+    })();
+
+    function setDirView(dir, mode) {
+        if (mode !== 'card' && mode !== 'list') return;
+        dirView[dir] = mode;
+        try { safeStorage.setItem('ssmvp_dirview', JSON.stringify(dirView)); } catch (e) {}
+        if (dir === 'donors')      renderDonors();
+        else if (dir === 'santos') renderSantos();
+        else if (dir === 'vendors') renderVendors();
+        else if (dir === 'orgs')   renderOrgs();
+    }
+
+    // Insert / refresh the List | Cards toggle directly above a directory's grid.
+    function ensureDirToggle(gridId, dir) {
+        const grid = document.getElementById(gridId);
+        if (!grid) return;
+        let bar = document.getElementById(gridId + '-viewbar');
+        if (!bar) {
+            bar = document.createElement('div');
+            bar.id = gridId + '-viewbar';
+            bar.className = 'flex justify-end mb-4';
+            grid.parentNode.insertBefore(bar, grid);
+        }
+        const m = dirView[dir] || 'list';
+        const on  = 'background:#0f172a;color:#fff';
+        const off = 'background:transparent;color:#64748b';
+        const base = 'display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:none;border-radius:12px;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s';
+        bar.innerHTML =
+            '<div style="display:inline-flex;gap:4px;background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:4px;box-shadow:0 1px 2px rgba(0,0,0,0.04)">' +
+              '<button type="button" onclick="setDirView(\'' + dir + '\',\'list\')" title="List view" style="' + base + ';' + (m === 'list' ? on : off) + '"><i data-lucide="list" style="width:15px;height:15px"></i> List</button>' +
+              '<button type="button" onclick="setDirView(\'' + dir + '\',\'card\')" title="Card view" style="' + base + ';' + (m === 'card' ? on : off) + '"><i data-lucide="layout-grid" style="width:15px;height:15px"></i> Cards</button>' +
+            '</div>';
+        lucide.createIcons();
+    }
+
+    // Container class per mode: card = responsive grid; list = single-column stack.
+    function applyDirGridClass(gridId, dir) {
+        const grid = document.getElementById(gridId);
+        const mode = dirView[dir] || 'list';
+        if (grid) grid.className = (mode === 'list')
+            ? 'flex flex-col gap-3'
+            : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6';
+        return mode;
+    }
+
     function renderDonors() {
         const query = (document.getElementById('donor-search').value || '').toLowerCase();
         const grid  = document.getElementById('donor-grid');
+        if (!grid) return;
+        ensureDirToggle('donor-grid', 'donors');
+        const mode = applyDirGridClass('donor-grid', 'donors');
         grid.innerHTML = '';
         const filtered = donors.filter(d =>
             `${d.firstName} ${d.lastName}`.toLowerCase().includes(query) ||
@@ -3122,34 +3150,28 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
             lucide.createIcons();
             return;
         }
-        applyDirSort(filtered, 'donors', function(d){ return (d.firstName||'') + ' ' + (d.lastName||''); }, function(d){ return d.firstAdded; });
-        grid.className = (dirView.donors === 'list') ? 'flex flex-col gap-2.5' : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6';
-        if (dirView.donors === 'list') {
-            filtered.forEach(d => {
-                const row = document.createElement('div');
-                row.className = 'flex items-center gap-4 bg-white rounded-2xl border border-slate-100 px-5 py-3.5 hover:border-slate-200 transition-all';
-                row.innerHTML = `
-                    <div class="w-10 h-10 shrink-0 bg-orange-100 text-orange-600 rounded-xl flex items-center justify-center font-black text-sm">${escHtml((d.firstName||'').charAt(0))}${escHtml((d.lastName||'').charAt(0))}</div>
-                    <div class="min-w-0 flex-1">
-                        <div class="font-bold text-sm truncate">${escHtml(d.firstName)} ${escHtml(d.lastName)}</div>
-                        <div class="text-xs text-slate-400 truncate">${escHtml(d.email) || escHtml(d.phone) || 'No contact'}</div>
-                    </div>
-                    <div class="text-right shrink-0 hidden sm:block">
-                        <div class="font-black text-sm text-slate-900">$${(d.total||0).toLocaleString('en-AU',{minimumFractionDigits:2})}</div>
-                        <div class="text-[10px] text-slate-400 font-semibold">${d.count||0} donation${(d.count||0)!==1?'s':''}</div>
-                    </div>
-                    <div class="flex gap-1 shrink-0">
-                        <button onclick="openDonorModal('${d.id}')" title="Edit donor" class="bg-slate-100 hover:bg-amber-50 hover:text-amber-600 text-slate-600 p-2 rounded-lg transition-all"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i></button>
-                        <button onclick="deleteDonor('${d.id}')" title="Remove donor" class="bg-slate-100 hover:bg-red-50 hover:text-red-600 text-slate-600 p-2 rounded-lg transition-all"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
-                        <button onclick="prefillDonation('${d.id}')" title="New donation" class="bg-slate-950 hover:bg-orange-500 text-white p-2 rounded-lg transition-all"><i data-lucide="plus-circle" class="w-3.5 h-3.5"></i></button>
-                    </div>`;
-                grid.appendChild(row);
-            });
-            lucide.createIcons();
-            return;
-        }
         filtered.forEach(d => {
             const card = document.createElement('div');
+            if (mode === 'list') {
+                card.className = "card bg-white rounded-2xl border border-slate-100 px-5 py-4 flex items-center gap-4";
+                card.innerHTML = `
+                    <div class="w-11 h-11 flex-shrink-0 bg-orange-100 text-orange-600 rounded-xl flex items-center justify-center font-black">${d.firstName.charAt(0)}${d.lastName.charAt(0)}</div>
+                    <div class="min-w-0 flex-1">
+                        <h4 class="font-bold text-slate-800 truncate">${escHtml(d.firstName)} ${escHtml(d.lastName)}</h4>
+                        <div class="text-xs text-slate-400 truncate">${escHtml(d.email) || 'No email'}${d.phone ? ' · ' + escHtml(d.phone) : ''}</div>
+                    </div>
+                    <div class="text-right flex-shrink-0 hidden sm:block">
+                        <div class="text-base font-black text-slate-900">$${(d.total||0).toLocaleString('en-AU',{minimumFractionDigits:2})}</div>
+                        <div class="text-[11px] font-semibold text-orange-600">${d.count||0} donation${(d.count||0) !== 1 ? 's' : ''}</div>
+                    </div>
+                    <div class="flex gap-1.5 flex-shrink-0">
+                        <button onclick="openDonorModal('${d.id}')" title="Edit donor" class="p-2.5 bg-slate-100 hover:bg-amber-50 hover:text-amber-600 text-slate-600 rounded-xl transition-all"><i data-lucide="edit-2" class="w-4 h-4"></i></button>
+                        <button onclick="deleteDonor('${d.id}')" title="Remove donor" class="p-2.5 bg-slate-100 hover:bg-red-50 hover:text-red-600 text-slate-600 rounded-xl transition-all"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        <button onclick="prefillDonation('${d.id}')" title="Add donation" class="p-2.5 bg-slate-950 hover:bg-orange-500 text-white rounded-xl transition-all"><i data-lucide="plus-circle" class="w-4 h-4"></i></button>
+                    </div>`;
+                grid.appendChild(card);
+                return;
+            }
             card.className = "card bg-white rounded-3xl border border-slate-100 overflow-hidden";
             card.innerHTML = `
                 <div class="p-8">
@@ -3208,6 +3230,9 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
     function renderVendors() {
         const query = (document.getElementById('vendor-search').value || '').toLowerCase();
         const grid  = document.getElementById('vendor-grid');
+        if (!grid) return;
+        ensureDirToggle('vendor-grid', 'vendors');
+        const mode = applyDirGridClass('vendor-grid', 'vendors');
         grid.innerHTML = '';
         const filtered = vendors.filter(v =>
             v.name.toLowerCase().includes(query) ||
@@ -3225,34 +3250,28 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
             lucide.createIcons();
             return;
         }
-        applyDirSort(filtered, 'vendors', function(v){ return v.name; }, function(v){ return v.firstAdded; });
-        grid.className = (dirView.vendors === 'list') ? 'flex flex-col gap-2.5' : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6';
-        if (dirView.vendors === 'list') {
-            filtered.forEach(v => {
-                const row = document.createElement('div');
-                row.className = 'flex items-center gap-4 bg-white rounded-2xl border border-slate-100 px-5 py-3.5 hover:border-slate-200 transition-all';
-                row.innerHTML = `
-                    <div class="w-10 h-10 shrink-0 bg-red-100 text-red-600 rounded-xl flex items-center justify-center font-black text-sm">${escHtml((v.name||'?').charAt(0).toUpperCase())}</div>
-                    <div class="min-w-0 flex-1">
-                        <div class="font-bold text-sm truncate">${escHtml(v.name)}</div>
-                        <div class="text-xs text-slate-400 truncate">${escHtml(v.email) || escHtml(v.phone) || 'No contact'}</div>
-                    </div>
-                    <div class="text-right shrink-0 hidden sm:block">
-                        <div class="font-black text-sm text-slate-900">$${(v.total||0).toLocaleString('en-AU',{minimumFractionDigits:2})}</div>
-                        <div class="text-[10px] text-slate-400 font-semibold">${v.count||0} transaction${(v.count||0)!==1?'s':''}</div>
-                    </div>
-                    <div class="flex gap-1 shrink-0">
-                        <button onclick="openVendorModal('${v.id}')" title="Edit vendor" class="bg-slate-100 hover:bg-amber-50 hover:text-amber-600 text-slate-600 p-2 rounded-lg transition-all"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i></button>
-                        <button onclick="deleteVendor('${v.id}')" title="Remove vendor" class="bg-slate-100 hover:bg-red-50 hover:text-red-600 text-slate-600 p-2 rounded-lg transition-all"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
-                        <button onclick="prefillExpense('${v.id}')" title="New expense" class="bg-slate-950 hover:bg-red-500 text-white p-2 rounded-lg transition-all"><i data-lucide="plus-circle" class="w-3.5 h-3.5"></i></button>
-                    </div>`;
-                grid.appendChild(row);
-            });
-            lucide.createIcons();
-            return;
-        }
         filtered.forEach(v => {
             const card = document.createElement('div');
+            if (mode === 'list') {
+                card.className = "card bg-white rounded-2xl border border-slate-100 px-5 py-4 flex items-center gap-4";
+                card.innerHTML = `
+                    <div class="w-11 h-11 flex-shrink-0 bg-red-100 text-red-600 rounded-xl flex items-center justify-center font-black">${v.name.charAt(0).toUpperCase()}</div>
+                    <div class="min-w-0 flex-1">
+                        <h4 class="font-bold text-slate-800 truncate">${escHtml(v.name)}</h4>
+                        <div class="text-xs text-slate-400 truncate">${escHtml(v.email) || 'No email'}${v.phone ? ' · ' + escHtml(v.phone) : ''}</div>
+                    </div>
+                    <div class="text-right flex-shrink-0 hidden sm:block">
+                        <div class="text-base font-black text-slate-900">$${(v.total||0).toLocaleString('en-AU',{minimumFractionDigits:2})}</div>
+                        <div class="text-[11px] font-semibold text-red-600">${v.count||0} transaction${(v.count||0) !== 1 ? 's' : ''}</div>
+                    </div>
+                    <div class="flex gap-1.5 flex-shrink-0">
+                        <button onclick="openVendorModal('${v.id}')" title="Edit vendor" class="p-2.5 bg-slate-100 hover:bg-amber-50 hover:text-amber-600 text-slate-600 rounded-xl transition-all"><i data-lucide="edit-2" class="w-4 h-4"></i></button>
+                        <button onclick="deleteVendor('${v.id}')" title="Remove vendor" class="p-2.5 bg-slate-100 hover:bg-red-50 hover:text-red-600 text-slate-600 rounded-xl transition-all"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        <button onclick="prefillExpense('${v.id}')" title="Add expense" class="p-2.5 bg-slate-950 hover:bg-red-600 text-white rounded-xl transition-all"><i data-lucide="minus-circle" class="w-4 h-4"></i></button>
+                    </div>`;
+                grid.appendChild(card);
+                return;
+            }
             card.className = "card bg-white rounded-3xl border border-slate-100 overflow-hidden";
             card.innerHTML = `
                 <div class="p-8">
@@ -3616,20 +3635,72 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
     // ====================== SANT DIRECTORY ======================
     function renderSantos() {
         const container = document.getElementById('sant-list');
+        if (!container) return;
+        ensureDirToggle('sant-list', 'santos');
+        const mode = applyDirGridClass('sant-list', 'santos');
         container.innerHTML = '';
+
+        // Aggregate donations per Sant from existing records.
+        // entry.sant holds the Sant name; count income entries that are not voided.
+        const santStats = {};
+        entries.forEach(e => {
+            if (!e || e.voided || e.type !== 'income' || !e.sant) return;
+            if (!santStats[e.sant]) santStats[e.sant] = { count: 0, total: 0 };
+            santStats[e.sant].count += 1;
+            santStats[e.sant].total += (Number(e.amount) || 0);
+        });
+
+        if (santos.length === 0) {
+            container.innerHTML = `<div class="col-span-3 text-center py-20 text-slate-400">
+                <i data-lucide="user-check" class="w-12 h-12 mx-auto opacity-30 mb-4"></i>
+                <p class="font-medium">No Sants yet. Click "Add New Sant" to add one.</p>
+            </div>`;
+            lucide.createIcons();
+            return;
+        }
+
         santos.forEach(s => {
-            const card = document.createElement('div');
+            const st    = santStats[s.name] || { count: 0, total: 0 };
+            const total = st.total.toLocaleString('en-AU', { minimumFractionDigits: 2 });
+            const count = st.count;
+            const card  = document.createElement('div');
+            if (mode === 'list') {
+                card.className = "card bg-white rounded-2xl border border-slate-100 px-5 py-4 flex items-center gap-4";
+                card.innerHTML = `
+                    <div class="w-11 h-11 flex-shrink-0 bg-orange-100 text-orange-600 rounded-xl flex items-center justify-center"><i data-lucide="user-check" class="w-5 h-5"></i></div>
+                    <div class="min-w-0 flex-1">
+                        <h4 class="font-bold text-slate-800 truncate">${escHtml(s.name)}</h4>
+                        <div class="text-xs text-slate-400 truncate">${escHtml(s.title) || 'Sant'}</div>
+                    </div>
+                    <div class="text-right flex-shrink-0 hidden sm:block">
+                        <div class="text-base font-black text-slate-900">$${total}</div>
+                        <div class="text-[11px] font-semibold text-orange-600">${count} donation${count !== 1 ? 's' : ''}</div>
+                    </div>
+                    <div class="flex gap-1.5 flex-shrink-0">
+                        <button onclick="toggleSantModal('${s.id}')" title="Edit Sant" class="p-2.5 bg-slate-100 hover:bg-amber-50 hover:text-amber-600 text-slate-600 rounded-xl transition-all"><i data-lucide="edit-2" class="w-4 h-4"></i></button>
+                        <button onclick="deleteSant('${s.id}')" title="Remove Sant" class="p-2.5 bg-slate-100 hover:bg-red-50 hover:text-red-600 text-slate-600 rounded-xl transition-all"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                    </div>`;
+                container.appendChild(card);
+                return;
+            }
             card.className = "card bg-white p-8 rounded-3xl border border-slate-100";
             card.innerHTML = `
                 <div class="flex justify-between items-start mb-6">
                     <div class="bg-orange-100 text-orange-600 p-4 rounded-2xl"><i data-lucide="user-check" class="w-8 h-8"></i></div>
-                    <div class="flex gap-2">
-                        <button onclick="toggleSantModal('${s.id}')" class="p-2 text-slate-400 hover:text-orange-500"><i data-lucide="edit-2" class="w-5 h-5"></i></button>
-                        <button onclick="deleteSant('${s.id}')" class="p-2 text-slate-400 hover:text-red-500"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
+                    <div class="text-right">
+                        <div class="text-xs font-bold text-slate-400 tracking-widest">TOTAL RECEIVED</div>
+                        <div class="text-2xl font-black text-slate-900">$${total}</div>
                     </div>
                 </div>
                 <h4 class="font-black text-xl">${escHtml(s.name)}</h4>
-                <p class="text-slate-400 text-sm mt-1">${escHtml(s.title) || 'Sant'}</p>`;
+                <p class="text-slate-400 text-sm mt-1">${escHtml(s.title) || 'Sant'}</p>
+                <div class="flex items-center justify-between text-sm border-t border-slate-100 pt-4 mt-4">
+                    <span class="bg-orange-50 text-orange-600 font-semibold px-3 py-1 rounded-xl text-xs">${count} donation${count !== 1 ? 's' : ''}</span>
+                    <div class="flex gap-1.5">
+                        <button onclick="toggleSantModal('${s.id}')" title="Edit Sant" class="p-2 text-slate-400 hover:text-orange-500"><i data-lucide="edit-2" class="w-5 h-5"></i></button>
+                        <button onclick="deleteSant('${s.id}')" title="Remove Sant" class="p-2 text-slate-400 hover:text-red-500"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
+                    </div>
+                </div>`;
             container.appendChild(card);
         });
         lucide.createIcons();
@@ -3922,7 +3993,6 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
             filtered = filtered.filter(e => { const d = new Date(e.date); return d >= new Date(from) && d <= new Date(to); });
         }
 
-        filtered = applyLedgerSort(filtered.slice());
         const body = document.getElementById('ledger-body');
         body.innerHTML = '';
         const isAdmin = currentUser && currentUser.role === 'admin';
@@ -3958,7 +4028,6 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
                                 : escHtml(e.vendorName || '—')}
                         </div>
                         <div class="text-xs text-slate-400">${e.type === 'income' ? (e.donorType === 'org' ? (e.orgAbn ? 'ABN: ' + escHtml(e.orgAbn) : (e.email || '')) : (e.email || '')) : (e.phone || '')}</div>
-                        ${e.type === 'income' && e.inHonourOf ? `<div class="text-xs text-pink-600 font-semibold mt-0.5">In honour of: ${escHtml(e.inHonourOf)}</div>` : ''}
                         ${e.type === 'expense' && e.paidBy ? `<div class="text-xs text-amber-600 font-semibold mt-0.5">Paid by: ${escHtml(e.paidBy)}${e.reimbursedTo && e.reimbursedTo !== e.paidBy ? ' → Reimburse: ' + escHtml(e.reimbursedTo) : ''}</div>` : ''}
                     </td>
                     <td class="px-8 py-5">
@@ -4837,9 +4906,8 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
     async function pullFromCloud() {
         if (!syncConfig.enabled || !syncConfig.url) return;
         try {
-            const res = await fetch(syncConfig.url + '?action=pull&key=' + encodeURIComponent(await authToken()), { method: 'GET' });
-            if (!res.ok) throw new Error('Pull failed: ' + res.status);
-            const data = await res.json();
+            const data = await fetchJsonRetry(syncConfig.url + '?action=pull&key=' + encodeURIComponent(await authToken()), { method: 'GET' }, 2);
+            if (!data) throw new Error('Pull failed');
 
             // ── Merge helper: add cloud records that don't exist locally (by id) ──
             function mergeById(local, cloud) {
@@ -4916,7 +4984,8 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
     // ── Role restrictions ──
     function applyRoleRestrictions() {
         const isAdmin = currentUser && currentUser.role === 'admin';
-        ['nav-settings', 'nav-ledger', 'nav-auditlog'].forEach(id => {
+        // Audit log stays admin-only (dimmed + non-clickable for volunteers)
+        ['nav-auditlog'].forEach(id => {
             const el = document.getElementById(id);
             if (el) {
                 el.style.opacity      = isAdmin ? '1' : '0.3';
@@ -4924,13 +4993,23 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
                 el.title = isAdmin ? '' : 'Admin access required';
             }
         });
+        // Settings tab is completely removed from the volunteer interface (not just dimmed)
+        const navSettings = document.getElementById('nav-settings');
+        if (navSettings) navSettings.style.display = isAdmin ? '' : 'none';
+        // Ledger Reports is now available to volunteers too — keep it fully enabled for everyone
+        const navLedger = document.getElementById('nav-ledger');
+        if (navLedger) { navLedger.style.opacity = '1'; navLedger.style.pointerEvents = 'auto'; navLedger.style.display = ''; navLedger.title = ''; }
+        // "Add User" is admin-only — hide the button for volunteers
+        const addUserBtn = document.getElementById('add-user-btn');
+        if (addUserBtn) addUserBtn.style.display = isAdmin ? '' : 'none';
         const panel  = document.getElementById('user-management-panel');
         const notice = document.getElementById('user-admin-only-notice');
         if (panel && notice) {
             panel.classList.toggle('hidden', !isAdmin);
             notice.classList.toggle('hidden', isAdmin);
         }
-        if (!isAdmin && (['tab-settings','tab-ledger','tab-auditlog'].some(id =>
+        // Redirect volunteers away from admin-only tabs (settings, auditlog). Ledger is now allowed.
+        if (!isAdmin && (['tab-settings','tab-auditlog'].some(id =>
             document.getElementById(id)?.classList.contains('active')))) {
             switchTab('donation');
         }
@@ -5201,6 +5280,8 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
         const query = (document.getElementById('org-search')?.value || '').toLowerCase();
         const grid  = document.getElementById('org-grid');
         if (!grid) return;
+        ensureDirToggle('org-grid', 'orgs');
+        const mode = applyDirGridClass('org-grid', 'orgs');
         grid.innerHTML = '';
 
         const filtered = orgs.filter(o =>
@@ -5218,37 +5299,31 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
             lucide.createIcons(); return;
         }
 
-        applyDirSort(filtered, 'orgs', function(o){ return o.name; }, function(o){ return o.firstAdded; });
-        grid.className = (dirView.orgs === 'list') ? 'flex flex-col gap-2.5' : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6';
-        if (dirView.orgs === 'list') {
-            filtered.forEach(o => {
-                const row = document.createElement('div');
-                row.className = 'flex items-center gap-4 bg-white rounded-2xl border border-slate-100 px-5 py-3.5 hover:border-slate-200 transition-all';
-                row.innerHTML = `
-                    <div class="w-10 h-10 shrink-0 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center font-black text-sm">${escHtml((o.name||'?').charAt(0).toUpperCase())}</div>
-                    <div class="min-w-0 flex-1">
-                        <div class="font-bold text-sm truncate">${escHtml(o.name)}</div>
-                        <div class="text-xs text-slate-400 truncate">${o.abn ? 'ABN: ' + escHtml(o.abn) : (escHtml(o.email) || escHtml(o.contactPerson) || 'No details')}</div>
-                    </div>
-                    <div class="text-right shrink-0 hidden sm:block">
-                        <div class="font-black text-sm text-slate-900">$${(o.total||0).toLocaleString('en-AU',{minimumFractionDigits:2})}</div>
-                        <div class="text-[10px] text-slate-400 font-semibold">${o.count||0} donation${(o.count||0)!==1?'s':''}</div>
-                    </div>
-                    <div class="flex gap-1 shrink-0">
-                        <button onclick="openOrgModal('${o.id}')" title="Edit organisation" class="bg-slate-100 hover:bg-amber-50 hover:text-amber-600 text-slate-600 p-2 rounded-lg transition-all"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i></button>
-                        <button onclick="deleteOrg('${o.id}')" title="Remove organisation" class="bg-slate-100 hover:bg-red-50 hover:text-red-600 text-slate-600 p-2 rounded-lg transition-all"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
-                        <button onclick="prefillOrgDonation('${o.id}')" title="New donation" class="bg-slate-950 hover:bg-indigo-500 text-white p-2 rounded-lg transition-all"><i data-lucide="plus-circle" class="w-3.5 h-3.5"></i></button>
-                    </div>`;
-                grid.appendChild(row);
-            });
-            lucide.createIcons();
-            return;
-        }
         filtered.forEach(o => {
             const total = o.total || 0;
             const count = o.count || 0;
             const initials = (o.name || '?').split(' ').slice(0,2).map(w => w[0]).join('').toUpperCase();
             const card = document.createElement('div');
+            if (mode === 'list') {
+                card.className = 'card bg-white rounded-2xl border border-indigo-100 px-5 py-4 flex items-center gap-4';
+                card.innerHTML = `
+                    <div class="w-11 h-11 flex-shrink-0 bg-indigo-100 text-indigo-700 rounded-xl flex items-center justify-center font-black">${escHtml(initials)}</div>
+                    <div class="min-w-0 flex-1">
+                        <h4 class="font-bold text-slate-800 truncate">${escHtml(o.name)}</h4>
+                        <div class="text-xs text-slate-400 truncate">${o.abn ? 'ABN: ' + escHtml(o.abn) : (o.contactPerson ? escHtml(o.contactPerson) : 'No ABN on file')}${o.email ? ' · ' + escHtml(o.email) : ''}</div>
+                    </div>
+                    <div class="text-right flex-shrink-0 hidden sm:block">
+                        <div class="text-base font-black text-slate-900">$${total.toLocaleString('en-AU',{minimumFractionDigits:2})}</div>
+                        <div class="text-[11px] font-semibold text-indigo-600">${count} donation${count !== 1 ? 's' : ''}</div>
+                    </div>
+                    <div class="flex gap-1.5 flex-shrink-0">
+                        <button onclick="openOrgModal('${o.id}')" title="Edit organisation" class="p-2.5 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-600 rounded-xl transition-all"><i data-lucide="edit-2" class="w-4 h-4"></i></button>
+                        <button onclick="deleteOrg('${o.id}')" title="Remove organisation" class="p-2.5 bg-slate-100 hover:bg-red-50 hover:text-red-600 text-slate-600 rounded-xl transition-all"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        <button onclick="prefillOrgDonation('${o.id}')" title="New donation" class="p-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition-all"><i data-lucide="plus-circle" class="w-4 h-4"></i></button>
+                    </div>`;
+                grid.appendChild(card);
+                return;
+            }
             card.className = 'card bg-white rounded-3xl border border-indigo-100 overflow-hidden flex flex-col';
             card.innerHTML = `
                 <div class="p-8 flex-1">
@@ -6155,132 +6230,88 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
         return await res.json().catch(function(){ return {}; });
     }
 
-    /* ── Forgot password (self-service reset via emailed code) ── */
-    function openForgotPassword(){
-        var m = document.getElementById('forgot-modal');
-        if (!m){ m = document.createElement('div'); m.id = 'forgot-modal';
-            m.style.cssText = 'position:fixed;inset:0;background:rgba(2,6,23,0.78);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px';
-            document.body.appendChild(m); }
-        m.innerHTML =
-            '<div style="background:#0f172a;border:1px solid rgba(255,255,255,0.1);border-radius:18px;max-width:380px;width:100%;padding:26px;color:#e2e8f0">' +
-              '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">' +
-                '<div style="font-size:18px;font-weight:800;color:#fff">Reset your password</div>' +
-                '<button onclick="document.getElementById(\'forgot-modal\').remove()" style="background:none;border:none;color:#64748b;font-size:24px;line-height:1;cursor:pointer">&times;</button>' +
-              '</div>' +
-              '<div id="forgot-stage1">' +
-                '<p style="font-size:13px;color:#94a3b8;margin:0 0 14px">Enter your account email and we will send you a one-time code.</p>' +
-                '<input id="forgot-email" type="email" placeholder="you@example.com" style="width:100%;box-sizing:border-box;padding:12px 14px;border-radius:12px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.05);color:#fff;font-size:14px;margin-bottom:10px">' +
-                '<div id="forgot-err1" style="display:none;color:#fca5a5;font-size:12px;font-weight:600;margin-bottom:8px"></div>' +
-                '<button id="forgot-send-btn" onclick="forgotSendCode()" class="login-btn" style="width:100%">Send code</button>' +
-              '</div>' +
-              '<div id="forgot-stage2" style="display:none">' +
-                '<p style="font-size:13px;color:#94a3b8;margin:0 0 14px">If that email is registered, a code is on its way. Enter it below with your new password.</p>' +
-                '<input id="forgot-code" inputmode="numeric" placeholder="6-digit code" style="width:100%;box-sizing:border-box;padding:12px 14px;border-radius:12px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.05);color:#fff;font-size:15px;letter-spacing:5px;text-align:center;margin-bottom:10px">' +
-                '<input id="forgot-newpw" type="password" placeholder="New password (min 8 characters)" style="width:100%;box-sizing:border-box;padding:12px 14px;border-radius:12px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.05);color:#fff;font-size:14px;margin-bottom:10px">' +
-                '<div id="forgot-err2" style="display:none;color:#fca5a5;font-size:12px;font-weight:600;margin-bottom:8px"></div>' +
-                '<button id="forgot-reset-btn" onclick="forgotSubmitReset()" class="login-btn" style="width:100%">Reset password</button>' +
-              '</div>' +
-            '</div>';
-    }
-    function _forgotDone(){
-        var m = document.getElementById('forgot-modal'); if (m) m.remove();
-        try { showToast('Password reset. Please sign in with your new password.', 'emerald'); }
-        catch(e){ alert('Password reset. Please sign in with your new password.'); }
-    }
-    async function forgotSendCode(){
-        var email = (document.getElementById('forgot-email').value||'').trim().toLowerCase();
-        var err = document.getElementById('forgot-err1');
-        if (!email){ err.textContent='Please enter your email.'; err.style.display='block'; return; }
-        err.style.display='none';
-        var btn = document.getElementById('forgot-send-btn'); btn.disabled=true; var t=btn.textContent; btn.textContent='Sending…';
-        try { await apiPost({ action:'forgot_request', email:email }); } catch(e){}
-        window._forgotEmail = email;
-        document.getElementById('forgot-stage1').style.display='none';
-        document.getElementById('forgot-stage2').style.display='block';
-        btn.disabled=false; btn.textContent=t;
-    }
-    async function forgotSubmitReset(){
-        var code = (document.getElementById('forgot-code').value||'').trim();
-        var pw   = document.getElementById('forgot-newpw').value;
-        var err = document.getElementById('forgot-err2');
-        if (!code || (pw||'').length < 8){ err.textContent='Enter the code and a password of at least 8 characters.'; err.style.display='block'; return; }
-        err.style.display='none';
-        var btn = document.getElementById('forgot-reset-btn'); btn.disabled=true; var t=btn.textContent; btn.textContent='Resetting…';
-        var data; try { data = await apiPost({ action:'forgot_reset', email: window._forgotEmail, code: code, password: pw }); } catch(e){ data = null; }
-        btn.disabled=false; btn.textContent=t;
-        if (data && data.ok){ _forgotDone(); }
-        else { err.textContent = (data && data.error==='weak_password') ? 'Password must be at least 8 characters.' : 'That code is invalid or expired. Please try again.'; err.style.display='block'; }
-    }
-
     async function loginStep1(){
         const email = (document.getElementById('login-email').value || '').trim().toLowerCase();
         const pw    = document.getElementById('login-password').value;
         const errEl = document.getElementById('login-step1-error');
         if (!email || !pw){ errEl.textContent='Please enter your email and password.'; errEl.style.display='block'; return; }
+        if (!busyGuard('login')) return;
         errEl.style.display='none';
-        let data;
-        try { data = await apiPost({ action:'login', email:email, password:pw }); }
-        catch(e){ errEl.textContent='Could not reach the server. Check your connection.'; errEl.style.display='block'; return; }
-        if (!data || !data.ok){
-            const map = { invalid_credentials:'Incorrect email or password.', locked:'Too many attempts — please wait a few minutes.', use_google:'This account uses Google sign-in — please use the Sign in with Google button.', email_failed:'Could not email your code. Please try again.' };
-            errEl.textContent = map[data && data.error] || 'Sign-in failed. Please try again.'; errEl.style.display='block'; return;
-        }
-        mfaTarget = { email:email };
-        hideAllLoginSteps();
-        if (data.mfa === 'totp'){
-            document.getElementById('login-step-totp').style.display='block';
-            document.getElementById('totp-user-name').textContent = email;
-            document.getElementById('totp-code-input').value='';
-            document.getElementById('login-totp-error').style.display='none';
-            setTimeout(function(){ document.getElementById('totp-code-input').focus(); }, 100);
-        } else {
-            document.getElementById('login-step-email-otp').style.display='block';
-            document.getElementById('mfa-email-display').textContent = email;
-            document.getElementById('mfa-code-input').value='';
-            document.getElementById('login-step2-error').style.display='none';
-            const banner = document.getElementById('otp-status-banner');
-            if (banner) banner.textContent = 'A 6-digit code has been emailed to you. It may take a moment to arrive.';
-            setTimeout(function(){ document.getElementById('mfa-code-input').focus(); }, 100);
-        }
+        const _b = document.querySelector('#login-step-1 .login-btn'); btnBusy(_b, 'Signing in…');
+        try {
+            let data;
+            try { data = await apiPost({ action:'login', email:email, password:pw }); }
+            catch(e){ errEl.textContent='Could not reach the server. Check your connection.'; errEl.style.display='block'; return; }
+            if (!data || !data.ok){
+                const map = { invalid_credentials:'Incorrect email or password.', locked:'Too many attempts — please wait a few minutes.', use_google:'This account uses Google sign-in — please use the Sign in with Google button.', email_failed:'Could not email your code. Please try again.' };
+                errEl.textContent = map[data && data.error] || 'Sign-in failed. Please try again.'; errEl.style.display='block'; return;
+            }
+            mfaTarget = { email:email };
+            hideAllLoginSteps();
+            if (data.mfa === 'totp'){
+                document.getElementById('login-step-totp').style.display='block';
+                document.getElementById('totp-user-name').textContent = email;
+                document.getElementById('totp-code-input').value='';
+                document.getElementById('login-totp-error').style.display='none';
+                setTimeout(function(){ document.getElementById('totp-code-input').focus(); }, 100);
+            } else {
+                document.getElementById('login-step-email-otp').style.display='block';
+                document.getElementById('mfa-email-display').textContent = email;
+                document.getElementById('mfa-code-input').value='';
+                document.getElementById('login-step2-error').style.display='none';
+                const banner = document.getElementById('otp-status-banner');
+                if (banner) banner.textContent = 'A 6-digit code has been emailed to you. It may take a moment to arrive.';
+                setTimeout(function(){ document.getElementById('mfa-code-input').focus(); }, 100);
+            }
+        } finally { btnDone(_b); busyClear('login'); }
     }
 
     async function loginStep2(){
         const entered = (document.getElementById('mfa-code-input').value || '').trim();
         const errEl   = document.getElementById('login-step2-error');
         if (!mfaTarget){ errEl.textContent='Session error — please go back and sign in again.'; errEl.style.display='block'; return; }
-        const data = await apiPost({ action:'verify_otp', email:mfaTarget.email, code:entered });
-        if (!data || !data.ok){
-            errEl.textContent='Invalid or expired code. Please check and try again.'; errEl.style.display='block';
-            const inp = document.getElementById('mfa-code-input'); inp.classList.add('mfa-shake');
-            setTimeout(function(){ inp.classList.remove('mfa-shake'); inp.value=''; inp.focus(); }, 450);
-            return;
-        }
-        setSession(data.session);
-        if (data.profile) data.profile.id = data.profile.userId;
-        mfaTarget = null;
-        unlockApp(data.profile);
+        if (!busyGuard('login')) return;
+        const _b = document.querySelector('#login-step-email-otp .login-btn'); btnBusy(_b, 'Verifying…');
+        try {
+            const data = await apiPost({ action:'verify_otp', email:mfaTarget.email, code:entered });
+            if (!data || !data.ok){
+                errEl.textContent='Invalid or expired code. Please check and try again.'; errEl.style.display='block';
+                const inp = document.getElementById('mfa-code-input'); inp.classList.add('mfa-shake');
+                setTimeout(function(){ inp.classList.remove('mfa-shake'); inp.value=''; inp.focus(); }, 450);
+                return;
+            }
+            setSession(data.session);
+            if (data.profile) data.profile.id = data.profile.userId;
+            mfaTarget = null;
+            unlockApp(data.profile);
+        } finally { btnDone(_b); busyClear('login'); }
     }
 
     async function loginStepTotp(){
         const entered = (document.getElementById('totp-code-input').value || '').trim();
         const errEl   = document.getElementById('login-totp-error');
         if (!mfaTarget){ errEl.textContent='Session error — please go back.'; errEl.style.display='block'; return; }
-        const data = await apiPost({ action:'verify_totp', email:mfaTarget.email, code:entered });
-        if (!data || !data.ok){
-            errEl.textContent='Invalid code. Codes expire every 30 seconds — try again.'; errEl.style.display='block';
-            const inp = document.getElementById('totp-code-input'); inp.classList.add('mfa-shake');
-            setTimeout(function(){ inp.classList.remove('mfa-shake'); inp.value=''; inp.focus(); }, 450);
-            return;
-        }
-        setSession(data.session);
-        if (data.profile) data.profile.id = data.profile.userId;
-        mfaTarget = null;
-        unlockApp(data.profile);
+        if (!busyGuard('login')) return;
+        const _b = document.querySelector('#login-step-totp .login-btn'); btnBusy(_b, 'Verifying…');
+        try {
+            const data = await apiPost({ action:'verify_totp', email:mfaTarget.email, code:entered });
+            if (!data || !data.ok){
+                errEl.textContent='Invalid code. Codes expire every 30 seconds — try again.'; errEl.style.display='block';
+                const inp = document.getElementById('totp-code-input'); inp.classList.add('mfa-shake');
+                setTimeout(function(){ inp.classList.remove('mfa-shake'); inp.value=''; inp.focus(); }, 450);
+                return;
+            }
+            setSession(data.session);
+            if (data.profile) data.profile.id = data.profile.userId;
+            mfaTarget = null;
+            unlockApp(data.profile);
+        } finally { btnDone(_b); busyClear('login'); }
     }
 
     async function handleGoogleCredential(response){
         const errEl = document.getElementById('google-signin-error');
         if (errEl) errEl.style.display='none';
+        if (!busyGuard('login')) return;
         try {
             if (!response || !response.credential) throw new Error('No credential returned by Google.');
             const data = await apiPost({ action:'google_login', idToken: response.credential });
@@ -6294,7 +6325,7 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
         } catch(err){
             console.error('Google sign-in failed:', err);
             if (errEl){ errEl.textContent = err.message || 'Google sign-in failed.'; errEl.style.display='block'; }
-        }
+        } finally { busyClear('login'); }
     }
 
     async function resendMfaCode(){ showToast('To get a fresh code, go back and sign in again.', 'amber'); }
@@ -6302,8 +6333,7 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
     async function loadUsersFromCloud(){
         try {
             if (syncConfig.url && sessionToken){
-                const res = await fetch(syncConfig.url + '?action=users&key=' + encodeURIComponent(sessionToken), { method:'GET' });
-                const data = await res.json().catch(function(){ return {}; });
+                const data = await fetchJsonRetry(syncConfig.url + '?action=users&key=' + encodeURIComponent(sessionToken), { method:'GET' }, 2) || {};
                 if (data && Array.isArray(data.users)){
                     appUsers = data.users.map(function(r){ return { id:r.userId, name:r.name||'', email:r.email||'', role:r.role||'volunteer', mfaMethod:r.mfaMethod||'', status:r.status||'active', mustChangePassword: (r.mustChangePassword===true || String(r.mustChangePassword)==='true') }; });
                     try { safeStorage.setItem('ssmvp_users', JSON.stringify(appUsers)); } catch(e){}
@@ -6382,9 +6412,12 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
     /* ════════════ Pending donor sign-ups (admin review of QR submissions) ════════════ */
     async function openPendingSignups(){
         if (!currentUser || currentUser.role !== 'admin'){ showToast('Admins only.', 'amber'); return; }
-        let data;
-        try { data = await apiPost({ action:'list_signups', session: sessionToken }); }
-        catch(e){ showToast('Could not load sign-ups.', 'red'); return; }
+        let data = null;
+        for (let i = 0; i < 2; i++){
+            try { data = await apiPost({ action:'list_signups', session: sessionToken }); if (data && data.ok) break; }
+            catch(e){ data = null; }
+            if (i === 0) await new Promise(function(r){ setTimeout(r, 400); });
+        }
         if (!data || !data.ok){ showToast('Could not load sign-ups.', 'red'); return; }
         _pendingList = data.signups || [];
         renderPendingSignups(_pendingList);
@@ -6439,15 +6472,23 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
                        '<button onclick="rejectSignup(\'' + s.signupId + '\')" style="flex:1;background:#f1f5f9;color:#475569;border:none;padding:9px;border-radius:10px;font-weight:700;cursor:pointer">Reject</button>' +
                      '</div></div>';
         }).join('');
+        const clearlyNewCount = list.filter(function(s){ return (s.matches || []).length === 0 && (s.pendingDupes || []).length === 0; }).length;
+        const bulkBar = (list.length && clearlyNewCount > 0)
+            ? '<button id="accept-all-clearly-new-btn" onclick="approveAllClearlyNew()" style="width:100%;background:#059669;color:#fff;border:none;padding:11px;border-radius:12px;font-weight:800;cursor:pointer;font-size:13px">&#10003; Accept all clearly-new (' + clearlyNewCount + ')</button>' +
+              '<div style="font-size:11px;color:#94a3b8;margin:6px 0 14px;line-height:1.4">Adds only sign-ups with no possible match. Anyone with a possible match stays in this list for individual review.</div>'
+            : '';
         m.innerHTML = '<div style="background:#fff;border-radius:18px;max-width:560px;width:100%;max-height:85vh;overflow:auto;padding:22px;font-family:Arial,sans-serif">' +
             '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">' +
               '<div style="font-size:18px;font-weight:900;color:#0f172a">Pending donor sign-ups</div>' +
               '<button onclick="document.getElementById(\'pending-signups-modal\').remove()" style="background:none;border:none;font-size:24px;line-height:1;cursor:pointer;color:#94a3b8">&times;</button>' +
             '</div>' +
+            bulkBar +
             (list.length ? rowsHtml : '<div style="text-align:center;color:#94a3b8;padding:24px">No pending sign-ups right now.</div>') +
             '</div>';
     }
     async function approveSignup(id, mode, donorId){
+        if (!busyGuard('signup')) return;
+        try {
         const d = await apiPost({ action:'approve_signup', session: sessionToken, signupId: id, mode: mode || 'new', donorId: donorId || '' });
         if (d && d.ok){
             if (d.donor){
@@ -6461,8 +6502,11 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
             showToast(d.updated ? 'Existing donor updated — no duplicate created.' : 'Added to the Donor Directory.', 'emerald');
             try { audit('signup_approved', 'Approved a donor sign-up (' + (d.updated ? 'merged into existing' : 'new') + ')', ''); } catch(e){}
         } else showToast('Could not approve that sign-up.', 'red');
+        } finally { busyClear('signup'); }
     }
     async function rejectSignup(id){
+        if (!busyGuard('signup')) return;
+        try {
         const d = await apiPost({ action:'reject_signup', session: sessionToken, signupId: id });
         if (d && d.ok){
             _pendingList = _pendingList.filter(function(x){ return x.signupId !== id; });
@@ -6470,6 +6514,50 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
             renderPendingSignups(_pendingList);
             showToast('Sign-up removed.', 'amber');
         } else showToast('Could not remove that sign-up.', 'red');
+        } finally { busyClear('signup'); }
+    }
+    // Bulk-approve only the "clearly new" sign-ups: those with no possible existing-donor
+    // match and no pending-vs-pending duplicate. Anyone with a possible match is left in the
+    // list for individual review (per the chosen bulk policy). Reuses the existing
+    // approve_signup backend action — no backend change.
+    async function approveAllClearlyNew(){
+        if (!currentUser || currentUser.role !== 'admin'){ showToast('Admins only.', 'amber'); return; }
+        const clearly = (_pendingList || []).filter(function(s){
+            return (s.matches || []).length === 0 && (s.pendingDupes || []).length === 0;
+        });
+        if (clearly.length === 0){ showToast('No clearly-new sign-ups to add — review possible matches individually.', 'amber'); return; }
+        const held = (_pendingList || []).length - clearly.length;
+        if (!confirm('Add ' + clearly.length + ' clearly-new sign-up' + (clearly.length !== 1 ? 's' : '') + ' as new donors?' +
+            (held ? '\n\n' + held + ' with a possible match will be left pending for individual review.' : ''))) return;
+        if (!busyGuard('signup')) return;
+        const btn = document.getElementById('accept-all-clearly-new-btn');
+        if (btn){ btn.disabled = true; btn.style.opacity = '0.6'; btn.style.cursor = 'wait'; btn.textContent = 'Adding…'; }
+        let added = 0, failed = 0;
+        try {
+            for (const s of clearly){
+                try {
+                    const d = await apiPost({ action:'approve_signup', session: sessionToken, signupId: s.signupId, mode:'new', donorId:'' });
+                    if (d && d.ok){
+                        if (d.donor){
+                            donors = donors.filter(function(x){ return String(x.id) !== String(d.donor.id); }).concat([d.donor]);
+                        }
+                        _pendingList = _pendingList.filter(function(x){ return x.signupId !== s.signupId; });
+                        added++;
+                    } else { failed++; }
+                } catch(e){ failed++; }
+            }
+            try { safeStorage.setItem('ssmvp_donors', JSON.stringify(donors)); } catch(e){}
+            renderDonors(); updateDonorDatalist();
+            recomputePending(_pendingList);
+            renderPendingSignups(_pendingList);
+            try { audit('signup_bulk_approved', 'Bulk-approved ' + added + ' clearly-new donor sign-up(s)', failed ? (failed + ' failed') : ''); } catch(e){}
+            let msg = 'Added ' + added + ' new donor' + (added !== 1 ? 's' : '') + '.';
+            if (held)   msg += ' Left ' + held + ' pending for manual review (possible matches).';
+            if (failed) msg += ' ' + failed + ' could not be added.';
+            showToast(msg, failed ? 'amber' : 'emerald');
+        } finally {
+            busyClear('signup');
+        }
     }
     // Inject the "Pending sign-ups" button into the Donor Directory toolbar (admins use it).
     (function(){
@@ -6611,39 +6699,29 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
         list.forEach(function(s){ s.matches = clientDonorMatches(s); s.pendingDupes = clientPendingDupes(s, list); });
     }
 
-    // Inject sort controls (directories + ledger) — A–Z default for directories.
-    (function(){
-        function mkSelect(opts, val, onChange){
-            var sel = document.createElement('select');
-            sel.className = 'custom-select pl-5 pr-10 py-3 bg-zinc-50 border border-slate-200 hover:border-slate-300 rounded-2xl text-sm font-medium text-slate-600 cursor-pointer';
-            sel.innerHTML = opts; sel.value = val;
-            sel.onchange = function(){ onChange(sel.value); };
-            return sel;
+    /* ════════════ Performance & robustness helpers (opts #2–#4) ════════════ */
+    // #2 — debounced directory search (re-render after typing stops, not per keystroke)
+    var _searchTimers = {};
+    function _debounce(key, fn, ms){ clearTimeout(_searchTimers[key]); _searchTimers[key] = setTimeout(fn, ms || 200); }
+    function searchDonorsDebounced(){ _debounce('donors', renderDonors, 200); }
+    function searchOrgsDebounced(){ _debounce('orgs', renderOrgs, 200); }
+    function searchVendorsDebounced(){ _debounce('vendors', renderVendors, 200); }
+    // #3 — busy guards + button "Working…" states (prevents double-submits, gives feedback)
+    var _busyFlags = {};
+    function busyGuard(key){ if (_busyFlags[key]) return false; _busyFlags[key] = true; return true; }
+    function busyClear(key){ _busyFlags[key] = false; }
+    function btnBusy(btn, label){ if (!btn) return; btn.dataset._label = btn.textContent; btn.disabled = true; btn.textContent = label || 'Working…'; }
+    function btnDone(btn){ if (!btn) return; btn.disabled = false; if (btn.dataset._label !== undefined){ btn.textContent = btn.dataset._label; delete btn.dataset._label; } }
+    // #4 — one silent retry for READ-only requests (never writes)
+    async function fetchJsonRetry(url, opts, tries){
+        tries = tries || 2;
+        for (var i = 0; i < tries; i++){
+            try { var res = await fetch(url, opts); if (res.ok) return await res.json().catch(function(){ return {}; }); }
+            catch(e){}
+            if (i < tries - 1) await new Promise(function(r){ setTimeout(r, 400); });
         }
-        function addDirSort(searchId, which, renderFn){
-            try{
-                var inp = document.getElementById(searchId); if (!inp) return;
-                var wrap = inp.closest('.relative') || inp.parentNode;
-                var container = wrap.parentNode; if (!container) return;
-                if (container.querySelector('.dir-sort')) return;
-                var sw = document.createElement('div'); sw.className = 'dir-sort flex items-center gap-2';
-                sw.appendChild(mkSelect('<option value="cards">Cards</option><option value="list">List</option>', dirView[which]||'cards', function(v){ dirView[which]=v; renderFn(); }));
-                sw.appendChild(mkSelect('<option value="az">Name A–Z</option><option value="za">Name Z–A</option><option value="recent">Recently added</option>', dirSort[which]||'az', function(v){ dirSort[which]=v; renderFn(); }));
-                container.insertBefore(sw, wrap.nextSibling);
-            }catch(e){}
-        }
-        addDirSort('donor-search', 'donors', renderDonors);
-        addDirSort('org-search', 'orgs', renderOrgs);
-        addDirSort('vendor-search', 'vendors', renderVendors);
-        try{
-            var rt = document.getElementById('report-type');
-            if (rt && !document.getElementById('ledger-sort')){
-                var ls = mkSelect('<option value="date">Date (newest)</option><option value="name-az">Name A–Z</option><option value="name-za">Name Z–A</option><option value="amount">Amount (high→low)</option>', ledgerSort, function(v){ ledgerSort=v; renderLedger(); });
-                ls.id = 'ledger-sort';
-                rt.parentNode.insertBefore(ls, rt.nextSibling);
-            }
-        }catch(e){}
-    })();
+        return null;
+    }
 
     window.onload = init;
 </script>
