@@ -530,8 +530,8 @@
                                     placeholder="Organisation name">
                             </div>
                             <div>
-                                <label class="block text-xs font-bold text-slate-500 mb-2 tracking-widest">ABN <span class="text-red-400">*</span></label>
-                                <input id="in-org-abn" required type="text"
+                                <label class="block text-xs font-bold text-slate-500 mb-2 tracking-widest">ABN <span class="text-slate-400 font-medium normal-case tracking-normal">(optional)</span></label>
+                                <input id="in-org-abn" type="text"
                                     class="input-focus w-full px-6 py-4 bg-zinc-50 border border-slate-200 rounded-2xl font-medium font-mono"
                                     placeholder="12 345 678 901">
                             </div>
@@ -1569,8 +1569,8 @@
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-bold text-slate-500 mb-2 tracking-widest">ABN <span class="text-red-400">*</span></label>
-                        <input id="modal-org-abn" required type="text" placeholder="12 345 678 901"
+                        <label class="block text-xs font-bold text-slate-500 mb-2 tracking-widest">ABN <span class="text-slate-400 font-medium normal-case tracking-normal">(optional)</span></label>
+                        <input id="modal-org-abn" type="text" placeholder="12 345 678 901"
                             class="input-focus w-full px-5 py-4 bg-zinc-50 border border-slate-200 rounded-2xl font-medium font-mono">
                     </div>
                     <div>
@@ -2063,6 +2063,8 @@
     function init() {
         lucide.createIcons();
         loadUsersFromCloud();   // pull central user accounts from the Sheet on startup
+        ensurePendingSyncBanner();
+        setTimeout(() => flushPendingSync(true), 2500);   // retry anything that failed earlier
         // Set donation date default to today
         const _now = new Date();
         const _perthTZ = { timeZone: 'Australia/Perth' };
@@ -2393,7 +2395,7 @@
                 const orgContact = document.getElementById('in-org-contact').value.trim();
                 if (!orgName)  { showToast('Please enter the Organisation Name.', 'red'); return; }
                 if (!orgEmail) { showToast('Please enter the Organisation Email.', 'red'); return; }
-                if (!orgAbn)   { showToast('Please enter the ABN.', 'red'); return; }
+                // ABN is optional — organisations without an ABN can still donate.
 
                 let org = null;
                 const linkedId = document.getElementById('in-org-id').value;
@@ -2651,17 +2653,95 @@
     }
 
     // ── Generic directory push (upsert) ──
-    async function pushDirectoryToCloud(tabName, payload) {
-        if (!syncConfig.enabled || !syncConfig.url) return;
+    // ---- Directory sync with retry + offline queue -------------------------
+    // Previously a failed push was only logged to the console, so a record could
+    // be saved locally and silently never reach the Google Sheet. Now we retry,
+    // and if it still fails we queue it and warn the user instead of losing it.
+    const PENDING_SYNC_KEY = 'ssmvp_pending_sync';
+
+    function readPendingSync() {
+        try { return JSON.parse(safeStorage.getItem(PENDING_SYNC_KEY) || '[]'); } catch (e) { return []; }
+    }
+    function writePendingSync(list) {
+        try { safeStorage.setItem(PENDING_SYNC_KEY, JSON.stringify(list.slice(-200))); } catch (e) {}
+    }
+    function queuePendingSync(tabName, payload) {
+        const list = readPendingSync();
+        const idField = { Organisations: 'orgId', Donors: 'donorId', Vendors: 'vendorId', Santas: 'santId' }[tabName];
+        const key = idField && payload[idField];
+        const i = key ? list.findIndex(p => p.tab === tabName && p[idField] === key) : -1;
+        if (i >= 0) list[i] = payload; else list.push(payload);
+        writePendingSync(list);
+        updatePendingSyncBadge();
+    }
+    function updatePendingSyncBadge() {
+        const n = readPendingSync().length;
+        const el = document.getElementById('pending-sync-badge');
+        if (!el) return;
+        if (!n) { el.classList.add('hidden'); return; }
+        el.classList.remove('hidden');
+        el.textContent = `${n} record${n > 1 ? 's' : ''} not yet saved to the cloud — click to retry`;
+    }
+
+    async function sendDirectoryPayload(payload) {
+        const res = await fetch(syncConfig.url, {
+            method:  'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body:    JSON.stringify({ ...payload, key: await authToken() })
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return true;
+    }
+
+    async function pushDirectoryToCloud(tabName, payload, _attempt) {
+        if (!syncConfig.enabled || !syncConfig.url) return false;
+        const attempt = _attempt || 1;
         try {
-            await fetch(syncConfig.url, {
-                method:  'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body:    JSON.stringify({ ...payload, key: await authToken() })
-            });
+            await sendDirectoryPayload(payload);
+            return true;
         } catch (err) {
-            console.error(`${tabName} sync failed:`, err);
+            console.error(`${tabName} sync failed (attempt ${attempt}):`, err);
+            if (attempt < 3) {
+                await new Promise(r => setTimeout(r, attempt * 700));
+                return pushDirectoryToCloud(tabName, payload, attempt + 1);
+            }
+            queuePendingSync(tabName, payload);
+            showToast(`"${payload.name || tabName}" was saved on this device but could NOT be saved to the cloud. It is queued and will retry.`, 'red');
+            return false;
         }
+    }
+
+    // Retry anything queued (on load, and whenever the connection returns).
+    async function flushPendingSync(silent) {
+        if (!syncConfig.enabled || !syncConfig.url) return;
+        let list = readPendingSync();
+        if (!list.length) { updatePendingSyncBadge(); return; }
+        const stillFailing = [];
+        for (const payload of list) {
+            try { await sendDirectoryPayload(payload); }
+            catch (e) { stillFailing.push(payload); }
+        }
+        writePendingSync(stillFailing);
+        updatePendingSyncBadge();
+        if (!silent) {
+            const done = list.length - stillFailing.length;
+            if (done > 0) showToast(`${done} queued record${done > 1 ? 's' : ''} saved to the cloud.`, 'emerald');
+            if (stillFailing.length) showToast(`${stillFailing.length} record${stillFailing.length > 1 ? 's' : ''} still not saved — check your connection.`, 'red');
+        }
+    }
+    window.addEventListener('online', () => flushPendingSync(true));
+
+    // Persistent, clickable warning so an unsynced record can never go unnoticed.
+    function ensurePendingSyncBanner() {
+        if (document.getElementById('pending-sync-badge')) { updatePendingSyncBadge(); return; }
+        const b = document.createElement('div');
+        b.id = 'pending-sync-badge';
+        b.className = 'hidden';
+        b.style.cssText = 'position:fixed;bottom:18px;left:18px;z-index:9999;background:#dc2626;color:#fff;padding:11px 17px;border-radius:14px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 8px 22px rgba(0,0,0,0.22);max-width:330px';
+        b.title = 'Click to retry saving these records to the cloud';
+        b.onclick = () => flushPendingSync(false);
+        document.body.appendChild(b);
+        updatePendingSyncBadge();
     }
 
     // ── Delete a directory row from the Sheet (donor / vendor / org / sant) ──
@@ -3084,6 +3164,42 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
         } catch (e) { /* keep defaults */ }
     })();
 
+    // ============ DIRECTORY SORT (Name A–Z default) ============
+    // Applies to all directory modules (Donor, Sant, Vendor, Org).
+    let dirSort = { donors: 'az', santos: 'az', vendors: 'az', orgs: 'az' };
+    (function loadDirSort() {
+        try {
+            const saved = JSON.parse(safeStorage.getItem('ssmvp_dirsort') || '{}');
+            if (saved && typeof saved === 'object') {
+                ['donors', 'santos', 'vendors', 'orgs'].forEach(k => {
+                    if (['az', 'za', 'recent'].includes(saved[k])) dirSort[k] = saved[k];
+                });
+            }
+        } catch (e) { /* keep defaults */ }
+    })();
+
+    function setDirSort(dir, mode) {
+        if (!['az', 'za', 'recent'].includes(mode)) return;
+        dirSort[dir] = mode;
+        try { safeStorage.setItem('ssmvp_dirsort', JSON.stringify(dirSort)); } catch (e) {}
+        if (dir === 'donors')       renderDonors();
+        else if (dir === 'santos')  renderSantos();
+        else if (dir === 'vendors') renderVendors();
+        else if (dir === 'orgs')    renderOrgs();
+    }
+
+    // Sorts a COPY so the stored data order is never changed.
+    function applyDirSort(arr, dir, getName) {
+        const mode = dirSort[dir] || 'az';
+        const out  = arr.slice();
+        if (mode === 'recent') return out.reverse();
+        out.sort((a, b) => {
+            const r = String(getName(a) || '').localeCompare(String(getName(b) || ''), undefined, { sensitivity: 'base' });
+            return mode === 'za' ? -r : r;
+        });
+        return out;
+    }
+
     function setDirView(dir, mode) {
         if (mode !== 'card' && mode !== 'list') return;
         dirView[dir] = mode;
@@ -3102,14 +3218,21 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
         if (!bar) {
             bar = document.createElement('div');
             bar.id = gridId + '-viewbar';
-            bar.className = 'flex justify-end mb-4';
+            bar.className = 'flex justify-end items-center gap-3 mb-4';
             grid.parentNode.insertBefore(bar, grid);
         }
         const m = dirView[dir] || 'list';
         const on  = 'background:#0f172a;color:#fff';
         const off = 'background:transparent;color:#64748b';
         const base = 'display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:none;border-radius:12px;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s';
+        const s = dirSort[dir] || 'az';
+        const selStyle = 'padding:8px 30px 8px 14px;border:1px solid #e2e8f0;border-radius:16px;background:#fff;font-size:12px;font-weight:700;color:#475569;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,0.04);appearance:none;background-image:url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2364748b\' stroke-width=\'3\' stroke-linecap=\'round\'%3E%3Cpolyline points=\'6 9 12 15 18 9\'%3E%3C/polyline%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 11px center;background-size:11px';
         bar.innerHTML =
+            '<select title="Sort" onchange="setDirSort(\'' + dir + '\', this.value)" style="' + selStyle + '">' +
+              '<option value="az"' + (s === 'az' ? ' selected' : '') + '>Name A–Z</option>' +
+              '<option value="za"' + (s === 'za' ? ' selected' : '') + '>Name Z–A</option>' +
+              '<option value="recent"' + (s === 'recent' ? ' selected' : '') + '>Recently added</option>' +
+            '</select>' +
             '<div style="display:inline-flex;gap:4px;background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:4px;box-shadow:0 1px 2px rgba(0,0,0,0.04)">' +
               '<button type="button" onclick="setDirView(\'' + dir + '\',\'list\')" title="List view" style="' + base + ';' + (m === 'list' ? on : off) + '"><i data-lucide="list" style="width:15px;height:15px"></i> List</button>' +
               '<button type="button" onclick="setDirView(\'' + dir + '\',\'card\')" title="Card view" style="' + base + ';' + (m === 'card' ? on : off) + '"><i data-lucide="layout-grid" style="width:15px;height:15px"></i> Cards</button>' +
@@ -3150,7 +3273,7 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
             lucide.createIcons();
             return;
         }
-        filtered.forEach(d => {
+        applyDirSort(filtered, 'donors', d => `${d.firstName || ''} ${d.lastName || ''}`.trim()).forEach(d => {
             const card = document.createElement('div');
             if (mode === 'list') {
                 card.className = "card bg-white rounded-2xl border border-slate-100 px-5 py-4 flex items-center gap-4";
@@ -3250,7 +3373,7 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
             lucide.createIcons();
             return;
         }
-        filtered.forEach(v => {
+        applyDirSort(filtered, 'vendors', v => v.name).forEach(v => {
             const card = document.createElement('div');
             if (mode === 'list') {
                 card.className = "card bg-white rounded-2xl border border-slate-100 px-5 py-4 flex items-center gap-4";
@@ -3659,7 +3782,7 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
             return;
         }
 
-        santos.forEach(s => {
+        applyDirSort(santos, 'santos', s => s.name).forEach(s => {
             const st    = santStats[s.name] || { count: 0, total: 0 };
             const total = st.total.toLocaleString('en-AU', { minimumFractionDigits: 2 });
             const count = st.count;
@@ -5299,7 +5422,7 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
             lucide.createIcons(); return;
         }
 
-        filtered.forEach(o => {
+        applyDirSort(filtered, 'orgs', o => o.name).forEach(o => {
             const total = o.total || 0;
             const count = o.count || 0;
             const initials = (o.name || '?').split(' ').slice(0,2).map(w => w[0]).join('').toUpperCase();
@@ -5434,6 +5557,13 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
             orgs.push({ id: nextSeqId('ORG', orgs), name, abn, phone, email, contactPerson: contact, address, suburb, postcode, xeroRef, canIssueTaxReceipt: true, total: 0, count: 0 });
         }
         saveToStorage();
+        // FIX (org data loss): organisations added/edited here were never pushed to the
+        // Google Sheet — they lived only in this browser, so the audit log recorded them
+        // but the directory/Sheet lost them. Mirrors the donor/vendor/sant save path.
+        if (syncConfig.enabled && syncConfig.url) {
+            const savedOrg = id ? orgs.find(x => x.id === id) : orgs[orgs.length - 1];
+            if (savedOrg) pushDirectoryToCloud('Organisations', buildOrgPayload(savedOrg));
+        }
         closeOrgModal();
         renderOrgs();
         audit(id ? 'org_updated' : 'org_created',
