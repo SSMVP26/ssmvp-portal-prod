@@ -1,3 +1,5 @@
+**SSMVP_PROD_index.html**
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -437,6 +439,26 @@
 
                     <!-- ── INDIVIDUAL PANEL ── -->
                     <div id="donor-individual-panel">
+                        <!-- ── UNIDENTIFIED / ANONYMOUS DONATION (bank transfers) ── -->
+                        <div class="mb-5 p-4 bg-amber-50 border border-amber-200 rounded-2xl">
+                            <label class="flex items-start gap-3 cursor-pointer">
+                                <input id="in-unidentified" type="checkbox" onchange="toggleUnidentified()"
+                                    class="mt-0.5 w-5 h-5 rounded accent-amber-500 flex-shrink-0">
+                                <span>
+                                    <span class="block text-sm font-bold text-amber-900">Direct Bank Transfer — name only</span>
+                                    <span class="block text-xs text-amber-700 mt-0.5">For bank transfers where you only know the donor's name. Phone and email are not required.</span>
+                                </span>
+                            </label>
+                            <div id="unidentified-fields" class="hidden mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="md:col-span-2">
+                                    <label class="block text-xs font-bold text-amber-700 mb-2 tracking-widest">BANK REFERENCE / NARRATION <span class="text-slate-400 font-medium normal-case tracking-normal">(optional)</span></label>
+                                    <input id="in-bank-ref" type="text"
+                                        class="input-focus w-full px-5 py-3 bg-white border border-amber-300 rounded-2xl font-medium font-mono text-sm"
+                                        placeholder="e.g. SMITH J / OSKO 3AUG">
+                                    <p class="text-[11px] text-amber-600 mt-1.5 font-medium">Exactly as it appears on the bank statement — helpful when reconciling.</p>
+                                </div>
+                            </div>
+                        </div>
                         <!-- Smart-search dropdown -->
                         <div id="donor-suggest-wrap" class="relative mb-4 hidden">
                             <label class="block text-xs font-bold text-orange-500 mb-2 tracking-widest">QUICK SEARCH DONOR</label>
@@ -452,27 +474,27 @@
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
-                                <label class="block text-xs font-bold text-slate-500 mb-2 tracking-widest">FIRST NAME <span class="text-red-400">*</span></label>
+                                <label class="block text-xs font-bold text-slate-500 mb-2 tracking-widest">FIRST NAME <span id="req-in-fname" class="text-red-400">*</span></label>
                                 <input id="in-fname" type="text" oninput="if(!this.value.trim())clearDonorLinkedFields()"
                                     onfocus="revealDonorSearch()"
                                     class="input-focus w-full px-6 py-4 bg-zinc-50 border border-slate-200 rounded-2xl font-medium"
                                     placeholder="First name">
                             </div>
                             <div>
-                                <label class="block text-xs font-bold text-slate-500 mb-2 tracking-widest">LAST NAME <span class="text-red-400">*</span></label>
+                                <label class="block text-xs font-bold text-slate-500 mb-2 tracking-widest">LAST NAME <span id="req-in-lname" class="text-red-400">*</span></label>
                                 <input id="in-lname" type="text"
                                     onfocus="revealDonorSearch()"
                                     class="input-focus w-full px-6 py-4 bg-zinc-50 border border-slate-200 rounded-2xl font-medium"
                                     placeholder="Last name">
                             </div>
                             <div>
-                                <label class="block text-xs font-bold text-slate-500 mb-2 tracking-widest">PHONE NUMBER <span class="text-red-400">*</span></label>
+                                <label class="block text-xs font-bold text-slate-500 mb-2 tracking-widest">PHONE NUMBER <span id="req-in-phone" class="text-red-400">*</span></label>
                                 <input id="in-phone" type="tel" placeholder="04xx xxx xxx"
                                     onfocus="revealDonorSearch()"
                                     class="input-focus w-full px-6 py-4 bg-zinc-50 border border-slate-200 rounded-2xl font-medium">
                             </div>
                             <div>
-                                <label class="block text-xs font-bold text-slate-500 mb-2 tracking-widest">EMAIL ADDRESS <span class="text-red-400">*</span></label>
+                                <label class="block text-xs font-bold text-slate-500 mb-2 tracking-widest">EMAIL ADDRESS <span id="req-in-email" class="text-red-400">*</span></label>
                                 <input id="in-email" type="email"
                                     onfocus="revealDonorSearch()"
                                     class="input-focus w-full px-6 py-4 bg-zinc-50 border border-slate-200 rounded-2xl font-medium"
@@ -1719,8 +1741,8 @@
         <div class="flex items-center gap-4 mb-6">
             <div class="bg-red-100 text-red-600 p-3 rounded-2xl"><i data-lucide="ban" class="w-6 h-6"></i></div>
             <div>
-                <h3 class="text-xl font-black">Void Entry</h3>
-                <p class="text-slate-500 text-sm">This entry will be marked void and excluded from totals</p>
+                <h3 id="void-modal-title" class="text-xl font-black">Void Entry</h3>
+                <p id="void-modal-desc" class="text-slate-500 text-sm">This entry will be marked void and excluded from totals</p>
             </div>
         </div>
         <input type="hidden" id="void-entry-id">
@@ -1733,7 +1755,7 @@
         <div id="void-modal-error" class="text-red-500 text-sm font-semibold mb-4 hidden"></div>
         <div class="flex gap-4">
             <button onclick="closeVoidModal()" class="flex-1 py-4 font-semibold text-slate-500 hover:bg-slate-100 rounded-3xl">Cancel</button>
-            <button onclick="confirmVoid()" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-3xl transition-all">Void Entry</button>
+            <button id="void-modal-submit-btn" onclick="confirmVoid()" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-3xl transition-all">Void Entry</button>
         </div>
     </div>
 </div>
@@ -2047,6 +2069,59 @@
         return donor;
     }
 
+    // ── Unidentified / anonymous donations (bank transfers) ──────────────────
+    // Lets staff record real money immediately when donor details are unknown,
+    // then identify the donor later. Money is never left out of the ledger.
+
+    function isUnidentifiedMode() {
+        const cb = document.getElementById('in-unidentified');
+        return !!(cb && cb.checked);
+    }
+
+    function toggleUnidentified() {
+        const on     = isUnidentifiedMode();
+        const fields = document.getElementById('unidentified-fields');
+        if (fields) fields.classList.toggle('hidden', !on);
+
+        // Only phone and email stop being required — the donor's name is still needed.
+        ['in-email','in-phone'].forEach(id => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            if (!el.dataset.ph) el.dataset.ph = el.placeholder || '';
+            el.classList.toggle('opacity-50', on);
+            el.placeholder = on ? 'Optional' : el.dataset.ph;
+        });
+
+        // Hide the red * so the form visibly matches what is actually enforced.
+        const showStar = (id, need) => {
+            const st = document.getElementById('req-' + id);
+            if (st) st.style.display = need ? '' : 'none';
+        };
+        showStar('in-phone', !on);
+        showStar('in-email', !on);
+    }
+
+    // Name-only donors have no email, so findOrCreateDonor() would wrongly match any
+    // other blank-email record (including the placeholder). Match on name instead.
+    function findOrCreateDonorByName(firstName, lastName, email, phone) {
+        const fn = firstName.toLowerCase(), ln = lastName.toLowerCase();
+        let donor = null;
+        if (email) donor = donors.find(d => (d.email || '').toLowerCase() === email.toLowerCase());
+        if (!donor) donor = donors.find(d =>
+            !d.isSystem &&
+            (d.firstName || '').toLowerCase() === fn &&
+            (d.lastName  || '').toLowerCase() === ln
+        );
+        if (!donor) {
+            donor = { id: nextSeqId('DON', donors), firstName, lastName,
+                      email: email || '', phone: phone || '',
+                      address: '', suburb: '', postcode: '', xeroRef: '',
+                      total: 0, count: 0, firstAdded: new Date().toISOString() };
+            donors.push(donor);
+        }
+        return donor;
+    }
+
     function findOrCreateVendor(name, email, phone) {
         let vendor = vendors.find(v =>
             (email && v.email && v.email.toLowerCase() === email.toLowerCase()) ||
@@ -2064,6 +2139,7 @@
         lucide.createIcons();
         loadUsersFromCloud();   // pull central user accounts from the Sheet on startup
         ensurePendingSyncBanner();
+        toggleUnidentified();   // make the form's required markers match reality on load
         setTimeout(() => flushPendingSync(true), 2500);   // retry anything that failed earlier
         // Set donation date default to today
         const _now = new Date();
@@ -2442,30 +2518,58 @@
                 const lname = document.getElementById('in-lname').value.trim();
                 const email = document.getElementById('in-email').value.trim();
                 const phone = document.getElementById('in-phone').value.trim();
-                if (!fname) { showToast('Please enter the donor\'s First Name.', 'red'); return; }
-                if (!lname) { showToast('Please enter the donor\'s Last Name.', 'red'); return; }
-                if (!phone) { showToast('Please enter the donor\'s Phone Number.', 'red'); return; }
-                if (!email || !/\S+@\S+\.\S+/.test(email)) { showToast('Please enter a valid Email Address.', 'red'); return; }
 
-                const donor = findOrCreateDonor(fname, lname, email, phone);
-                entry.donorId   = donor.id;
-                entry.firstName = donor.firstName;
-                entry.lastName  = donor.lastName;
-                entry.email     = donor.email;
-                entry.phone     = donor.phone;
-                entry.address   = document.getElementById('in-address')?.value.trim()   || donor.address  || '';
-                entry.suburb    = document.getElementById('in-suburb')?.value.trim()    || donor.suburb   || '';
-                entry.postcode  = document.getElementById('in-postcode')?.value.trim()  || donor.postcode || '';
-                entry.xeroRef   = document.getElementById('in-xero-ref')?.value.trim()  || '';
-                entry.sant      = document.getElementById('in-sant')?.value             || '';
-                if (entry.address)  donor.address  = entry.address;
-                if (entry.suburb)   donor.suburb   = entry.suburb;
-                if (entry.postcode) donor.postcode = entry.postcode;
-                if (entry.xeroRef)  donor.xeroRef  = entry.xeroRef;
-                donor.total += entry.amount;
-                donor.count++;
-                // Push donor record to Donors sheet
-                pushDirectoryToCloud('Donors', buildDonorPayload(donor));
+                if (isUnidentifiedMode()) {
+                    // Direct Bank Transfer: we know the donor's name but not their
+                    // contact details. Record the money now — nothing is left pending.
+                    if (!fname) { showToast('Please enter the donor\'s First Name.', 'red'); return; }
+                    if (!lname) { showToast('Please enter the donor\'s Last Name.', 'red'); return; }
+
+                    entry.bankRef = (document.getElementById('in-bank-ref')?.value || '').trim();
+                    entry.xeroRef = document.getElementById('in-xero-ref')?.value.trim() || '';
+                    entry.sant    = document.getElementById('in-sant')?.value || '';
+
+                    const donor = findOrCreateDonorByName(fname, lname, email, phone);
+                    if (email && !donor.email) donor.email = email;
+                    if (phone && !donor.phone) donor.phone = phone;
+                    donor.total = (donor.total || 0) + entry.amount;
+                    donor.count = (donor.count || 0) + 1;
+
+                    entry.donorId   = donor.id;
+                    entry.firstName = donor.firstName;
+                    entry.lastName  = donor.lastName;
+                    entry.email     = donor.email    || '';
+                    entry.phone     = donor.phone    || '';
+                    entry.address   = donor.address  || '';
+                    entry.suburb    = donor.suburb   || '';
+                    entry.postcode  = donor.postcode || '';
+                    pushDirectoryToCloud('Donors', buildDonorPayload(donor));
+                } else {
+                    if (!fname) { showToast('Please enter the donor\'s First Name.', 'red'); return; }
+                    if (!lname) { showToast('Please enter the donor\'s Last Name.', 'red'); return; }
+                    if (!phone) { showToast('Please enter the donor\'s Phone Number.', 'red'); return; }
+                    if (!email || !/\S+@\S+\.\S+/.test(email)) { showToast('Please enter a valid Email Address.', 'red'); return; }
+
+                    const donor = findOrCreateDonor(fname, lname, email, phone);
+                    entry.donorId   = donor.id;
+                    entry.firstName = donor.firstName;
+                    entry.lastName  = donor.lastName;
+                    entry.email     = donor.email;
+                    entry.phone     = donor.phone;
+                    entry.address   = document.getElementById('in-address')?.value.trim()   || donor.address  || '';
+                    entry.suburb    = document.getElementById('in-suburb')?.value.trim()    || donor.suburb   || '';
+                    entry.postcode  = document.getElementById('in-postcode')?.value.trim()  || donor.postcode || '';
+                    entry.xeroRef   = document.getElementById('in-xero-ref')?.value.trim()  || '';
+                    entry.sant      = document.getElementById('in-sant')?.value             || '';
+                    if (entry.address)  donor.address  = entry.address;
+                    if (entry.suburb)   donor.suburb   = entry.suburb;
+                    if (entry.postcode) donor.postcode = entry.postcode;
+                    if (entry.xeroRef)  donor.xeroRef  = entry.xeroRef;
+                    donor.total += entry.amount;
+                    donor.count++;
+                    // Push donor record to Donors sheet
+                    pushDirectoryToCloud('Donors', buildDonorPayload(donor));
+                }
             }
         } else {
             // ── Expense / Vendor ──
@@ -2540,11 +2644,15 @@
             const b = document.getElementById(id);
             if (b) { b.classList.add('hidden'); b.classList.remove('flex'); }
         });
+        const _uc = document.getElementById('in-unidentified');
+        if (_uc) { _uc.checked = false; toggleUnidentified(); }
+        const _ubr = document.getElementById('in-bank-ref'); if (_ubr) _ubr.value = '';
 
-        // Push entry + send email receipt via cloud
+        // Push entry + send email receipt via cloud.
+        // No receipt for unidentified/anonymous entries — there is no valid email address.
         if (syncConfig.enabled && syncConfig.url) {
             pushToCloud(entry);
-            if (type === 'income') sendEmailReceipt(entry);
+            if (type === 'income' && entry.email) sendEmailReceipt(entry);
         }
     }
 
@@ -2759,7 +2867,7 @@
     }
 
     // ── Main entry push (Donations / Expenses) ──
-    async function pushToCloud(entry) {
+    async function pushToCloud(entry, silent) {
         if (!syncConfig.enabled || !syncConfig.url) return;
 
         const dt = new Date(entry.date);
@@ -2794,7 +2902,13 @@
                 amount:       entry.amount.toFixed(2),
                 method:       entry.method       || '',
                 reference:    entry.ref          || '',
-                recordedBy:   entry.recordedBy   || (currentUser ? currentUser.name : 'Unknown')
+                recordedBy:   entry.recordedBy   || (currentUser ? currentUser.name : 'Unknown'),
+                voided:       !!entry.voided,
+                voidReason:   entry.voidReason   || '',
+                voidPending:  !!entry.voidPending,
+                voidRequestReason: entry.voidRequestReason || '',
+                voidRequestedBy:   entry.voidRequestedBy   || '',
+                voidRequestedAt:   entry.voidRequestedAt   || ''
             };
         } else {
             payload = {
@@ -2814,7 +2928,13 @@
                 method:       entry.method       || '',
                 reference:    entry.ref          || '',
                 xeroRef:      entry.xeroRef      || '',
-                recordedBy:   entry.recordedBy   || (currentUser ? currentUser.name : 'Unknown')
+                recordedBy:   entry.recordedBy   || (currentUser ? currentUser.name : 'Unknown'),
+                voided:       !!entry.voided,
+                voidReason:   entry.voidReason   || '',
+                voidPending:  !!entry.voidPending,
+                voidRequestReason: entry.voidRequestReason || '',
+                voidRequestedBy:   entry.voidRequestedBy   || '',
+                voidRequestedAt:   entry.voidRequestedAt   || ''
             };
         }
 
@@ -2825,12 +2945,15 @@
                 body:    JSON.stringify({ ...payload, key: await authToken() })
             });
             const data = await res.json().catch(() => ({}));
-            showToast(entry.type === 'income'
-                ? `☁️ Donation synced to Google Sheets`
-                : `☁️ Expense synced to Google Sheets`, 'emerald');
+            if (!silent) {
+                showToast(entry.type === 'income'
+                    ? `☁️ Donation synced to Google Sheets`
+                    : `☁️ Expense synced to Google Sheets`, 'emerald');
+            }
         } catch (err) {
             console.error('Cloud sync failed:', err);
-            showToast('⚠️ Cloud sync failed — entry saved locally.', 'amber');
+            if (!silent) showToast('⚠️ Cloud sync failed — entry saved locally.', 'amber');
+            else showToast('⚠️ Void recorded locally, but could not sync the status to the cloud — it may reappear until connection is restored.', 'amber');
         }
     }
 
@@ -4126,6 +4249,7 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
             document.getElementById('ledger-empty').classList.add('hidden');
             filtered.forEach(e => {
                 const isVoided  = !!e.voided;
+                const isPending = !!e.voidPending;
                 const isEdited  = e.auditTrail && e.auditTrail.some(a => a.action === 'edit');
                 const hasTrail  = e.auditTrail && e.auditTrail.length > 0;
                 const trailId   = 'trail-' + e.id;
@@ -4139,6 +4263,7 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
                         <div class="text-xs text-slate-400">${new Date(e.date).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>
                         <div class="mt-1 flex gap-1 flex-wrap">
                             ${isVoided  ? '<span class="void-badge">Voided</span>'   : ''}
+                            ${isPending ? '<span class="void-badge" style="background:#fef3c7;color:#92400e">Void pending approval</span>' : ''}
                             ${isEdited  ? '<span class="edited-badge">Edited</span>' : ''}
                         </div>
                     </td>
@@ -4151,6 +4276,7 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
                                 : escHtml(e.vendorName || '—')}
                         </div>
                         <div class="text-xs text-slate-400">${e.type === 'income' ? (e.donorType === 'org' ? (e.orgAbn ? 'ABN: ' + escHtml(e.orgAbn) : (e.email || '')) : (e.email || '')) : (e.phone || '')}</div>
+                        ${e.type === 'income' && e.bankRef ? `<div class="text-xs text-amber-700 font-semibold mt-0.5 font-mono">Bank ref: ${escHtml(e.bankRef)}</div>` : ''}
                         ${e.type === 'expense' && e.paidBy ? `<div class="text-xs text-amber-600 font-semibold mt-0.5">Paid by: ${escHtml(e.paidBy)}${e.reimbursedTo && e.reimbursedTo !== e.paidBy ? ' → Reimburse: ' + escHtml(e.reimbursedTo) : ''}</div>` : ''}
                     </td>
                     <td class="px-8 py-5">
@@ -4168,7 +4294,9 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
                             ${e.type === 'income' && !isVoided ? `<button class="row-btn" onclick="printReceipt('${e.id}')" title="Print receipt" style="color:#94a3b8" onmouseover="this.style.color='#f97316';this.style.background='#fff7ed'" onmouseout="this.style.color='#94a3b8';this.style.background='none'"><i data-lucide="printer" style="width:16px;height:16px"></i></button>` : ''}
                             ${hasTrail ? `<button class="row-btn hist-btn" onclick="toggleTrail('${trailId}')" title="View audit history"><i data-lucide="history" style="width:16px;height:16px"></i></button>` : ''}
                             ${isAdmin && !isVoided ? `<button class="row-btn edit-btn" onclick="openEditModal('${e.id}')" title="Edit entry"><i data-lucide="pencil" style="width:16px;height:16px"></i></button>` : ''}
-                            ${isAdmin && !isVoided ? `<button class="row-btn void-btn" onclick="openVoidModal('${e.id}')" title="Void entry"><i data-lucide="ban" style="width:16px;height:16px"></i></button>` : ''}
+                            ${!isVoided && !isPending ? `<button class="row-btn void-btn" onclick="openVoidModal('${e.id}')" title="${isAdmin ? 'Void entry' : 'Request void'}"><i data-lucide="ban" style="width:16px;height:16px"></i></button>` : ''}
+                            ${isPending && isAdmin ? `<button class="row-btn" onclick="approveVoidRequest('${e.id}')" title="Approve void" style="color:#dc2626"><i data-lucide="check" style="width:16px;height:16px"></i></button>` : ''}
+                            ${isPending && isAdmin ? `<button class="row-btn" onclick="rejectVoidRequest('${e.id}')" title="Reject void request" style="color:#64748b"><i data-lucide="x" style="width:16px;height:16px"></i></button>` : ''}
                         </div>
                     </td>`;
                 body.appendChild(tr);
@@ -4182,7 +4310,12 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
                         <div class="audit-row">
                             <span class="audit-time">${new Date(a.at).toLocaleString('en-AU',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</span>
                             <span class="audit-actor">${a.by}</span>
-                            <span class="audit-desc">${a.action === 'void' ? '🚫 Voided' : '✏️ Edited'} — ${escHtml(a.reason)}</span>
+                            <span class="audit-desc">${
+                                a.action === 'void'           ? '🚫 Voided' :
+                                a.action === 'void_requested'  ? '⏳ Void requested' :
+                                a.action === 'void_approved'   ? '✅ Void approved' :
+                                a.action === 'void_rejected'   ? '↩️ Void rejected' : '✏️ Edited'
+                            } — ${escHtml(a.reason)}</span>
                         </div>`).join('');
                     trailTr.innerHTML = `<td colspan="5" class="audit-trail"><div class="text-xs font-bold text-slate-400 tracking-widest mb-2">AUDIT TRAIL</div>${trailRows}</td>`;
                     body.appendChild(trailTr);
@@ -4198,6 +4331,25 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
         document.getElementById('report-total-expense').textContent = '$' + expense.toLocaleString('en-AU',{minimumFractionDigits:2});
         document.getElementById('report-net-change').textContent    = '$' + (income - expense).toLocaleString('en-AU',{minimumFractionDigits:2});
         lucide.createIcons();
+        ensurePendingVoidsButton();
+        updatePendingVoidBadge();
+    }
+
+    // Inject the "Pending void approvals" button into the Ledger toolbar (admin only — visibility handled in updatePendingVoidBadge).
+    function ensurePendingVoidsButton() {
+        try {
+            const showVoided = document.getElementById('show-voided');
+            const bar = showVoided ? showVoided.closest('div') : null;
+            if (bar && !document.getElementById('pending-voids-btn')) {
+                const btn = document.createElement('button');
+                btn.id = 'pending-voids-btn';
+                btn.type = 'button';
+                btn.innerHTML = '⏳ Pending void approvals';
+                btn.className = 'flex items-center gap-2 text-xs font-bold text-amber-700 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 px-4 py-2 rounded-2xl transition-all ml-3';
+                btn.onclick = openPendingVoidApprovals;
+                bar.parentNode.insertBefore(btn, bar.nextSibling);
+            }
+        } catch (e) {}
     }
 
     function toggleTrail(trailId) {
@@ -4291,10 +4443,10 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
         showToast('Entry updated and audit trail recorded.', 'emerald');
     }
 
-    // ── VOID entry ──
+    // ── VOID entry (admin voids immediately; volunteers submit a request for admin approval) ──
     function openVoidModal(entryId) {
         const e = entries.find(x => x.id === entryId);
-        if (!e || e.voided) return;
+        if (!e || e.voided || e.voidPending) return;
         document.getElementById('void-entry-id').value = entryId;
         document.getElementById('void-reason').value   = '';
         document.getElementById('void-modal-error').classList.add('hidden');
@@ -4304,6 +4456,18 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
                 : `${e.firstName} ${e.lastName} — $${e.amount.toFixed(2)} on ${new Date(e.date).toLocaleDateString('en-AU')}`)
             : `${e.vendorName || 'Expense'} — $${e.amount.toFixed(2)} on ${new Date(e.date).toLocaleDateString('en-AU')}`;
         document.getElementById('void-entry-summary').textContent = label;
+
+        // Admins void immediately; everyone else submits a request an admin must approve.
+        const isAdmin = currentUser && currentUser.role === 'admin';
+        const title = document.getElementById('void-modal-title');
+        const desc  = document.getElementById('void-modal-desc');
+        const btn   = document.getElementById('void-modal-submit-btn');
+        if (title) title.textContent = isAdmin ? 'Void Entry' : 'Request Void';
+        if (desc)  desc.textContent  = isAdmin
+            ? 'This entry will be marked void and excluded from totals'
+            : 'An admin must approve this before the entry is excluded from totals';
+        if (btn)   btn.textContent   = isAdmin ? 'Void Entry' : 'Submit Request';
+
         document.getElementById('void-modal').classList.remove('hidden');
     }
 
@@ -4320,7 +4484,12 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
         const e = entries.find(x => x.id === id);
         if (!e) return;
 
-        e.voided = true;
+        const isAdmin = currentUser && currentUser.role === 'admin';
+        if (!isAdmin) { submitVoidRequest(e, reason); return; }
+
+        e.voided      = true;
+        e.voidReason  = reason;
+        e.voidPending = false;   // in case this entry had an outstanding request, admin voiding directly resolves it
         if (!e.auditTrail) e.auditTrail = [];
         e.auditTrail.push({
             action: 'void',
@@ -4331,11 +4500,164 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
 
         pushAuditEvent({ action: 'void', entryId: id, by: currentUser ? currentUser.name : 'Unknown', at: new Date().toISOString(), summary: entryLabel(e), detail: `Reason: ${reason}` });
 
+        // Re-sync the entry so the Google Sheet copy also shows it as voided —
+        // otherwise a future login that merges cloud data can bring the
+        // original (still-active) copy back and it looks like it "reappeared".
+        if (syncConfig.enabled && syncConfig.url) pushToCloud(e, true);
+
         saveToStorage();
         updateBalance();
         renderLedger();
         closeVoidModal();
         showToast('Entry voided and recorded in audit log.', 'red');
+    }
+
+    // ── Volunteer void requests: staged until an admin approves them ──
+    // The entry stays fully active (counted in totals) until approved — voiding
+    // only takes effect once an admin confirms it via the Pending void approvals list.
+    function submitVoidRequest(e, reason) {
+        e.voidPending       = true;
+        e.voidRequestReason = reason;
+        e.voidRequestedBy   = currentUser ? currentUser.name : 'Unknown';
+        e.voidRequestedAt   = new Date().toISOString();
+        if (!e.auditTrail) e.auditTrail = [];
+        e.auditTrail.push({ action: 'void_requested', at: e.voidRequestedAt, by: e.voidRequestedBy, reason });
+
+        pushAuditEvent({ action: 'void_requested', entryId: e.id, by: e.voidRequestedBy, at: e.voidRequestedAt, summary: entryLabel(e), detail: `Reason: ${reason}` });
+
+        if (syncConfig.enabled && syncConfig.url) pushToCloud(e, true);
+
+        saveToStorage();
+        renderLedger();
+        closeVoidModal();
+        showToast('Void request submitted — an admin must approve it before this entry is excluded.', 'amber');
+        notifyAdminsOfVoidRequest(e, reason);   // fire-and-forget email to all admins
+    }
+
+    // Email every admin so a void request doesn't sit unnoticed until next login.
+    async function notifyAdminsOfVoidRequest(e, reason) {
+        if (!syncConfig.enabled || !syncConfig.url) return;
+        try { await loadUsersFromCloud(); } catch (err) { /* fall back to whatever appUsers already has */ }
+        const admins = (appUsers || []).filter(u => u.role === 'admin' && u.email);
+        if (!admins.length) return;
+
+        const who    = entryLabel(e);
+        const kind   = e.type === 'income' ? 'donation' : 'expense';
+        const dateStr= new Date(e.date).toLocaleDateString('en-AU');
+        const subject = `Void approval needed — ${who}`;
+        const body =
+            `<p>${escHtml(e.voidRequestedBy)} has requested to void a ${kind} entry.</p>` +
+            `<ul>` +
+                `<li><strong>Entry:</strong> ${escHtml(who)}</li>` +
+                `<li><strong>Date:</strong> ${dateStr}</li>` +
+                `<li><strong>Reason given:</strong> ${escHtml(reason)}</li>` +
+            `</ul>` +
+            `<p>Sign in to the SSMVP Portal and open <strong>Pending void approvals</strong> on the Ledger tab to review.</p>`;
+
+        for (const admin of admins) {
+            try {
+                await fetch(syncConfig.url, {
+                    method:  'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body:    JSON.stringify({ key: await authToken(), tab: '__email__', to: admin.email, subject, body })
+                });
+            } catch (err) { console.warn('Void-request notification email failed for', admin.email, err); }
+        }
+    }
+
+    // ── Admin approval / rejection of a pending void request ──
+    function approveVoidRequest(id) {
+        if (!currentUser || currentUser.role !== 'admin') { showToast('Admins only.', 'amber'); return; }
+        const e = entries.find(x => x.id === id);
+        if (!e || !e.voidPending) return;
+
+        e.voided      = true;
+        e.voidReason  = e.voidRequestReason || 'Void request approved';
+        e.voidPending = false;
+        if (!e.auditTrail) e.auditTrail = [];
+        e.auditTrail.push({ action: 'void_approved', at: new Date().toISOString(), by: currentUser.name, reason: e.voidReason });
+
+        pushAuditEvent({ action: 'void_approved', entryId: id, by: currentUser.name, at: new Date().toISOString(), summary: entryLabel(e), detail: `Reason: ${e.voidReason}` });
+
+        if (syncConfig.enabled && syncConfig.url) pushToCloud(e, true);
+
+        saveToStorage();
+        updateBalance();
+        renderLedger();
+        renderPendingVoidApprovals();
+        showToast('Void approved — entry excluded from totals.', 'red');
+    }
+
+    function rejectVoidRequest(id) {
+        if (!currentUser || currentUser.role !== 'admin') { showToast('Admins only.', 'amber'); return; }
+        const e = entries.find(x => x.id === id);
+        if (!e || !e.voidPending) return;
+
+        const priorReason = e.voidRequestReason || '';
+        e.voidPending = false;
+        if (!e.auditTrail) e.auditTrail = [];
+        e.auditTrail.push({ action: 'void_rejected', at: new Date().toISOString(), by: currentUser.name, reason: `Rejected request: ${priorReason}` });
+
+        pushAuditEvent({ action: 'void_rejected', entryId: id, by: currentUser.name, at: new Date().toISOString(), summary: entryLabel(e), detail: `Original reason: ${priorReason}` });
+        e.voidRequestReason = '';
+
+        if (syncConfig.enabled && syncConfig.url) pushToCloud(e, true);
+
+        saveToStorage();
+        renderLedger();
+        renderPendingVoidApprovals();
+        showToast('Void request rejected — entry stays active.', 'emerald');
+    }
+
+    // ── Pending void approvals modal (admin only) ──
+    function openPendingVoidApprovals() {
+        if (!currentUser || currentUser.role !== 'admin') { showToast('Admins only.', 'amber'); return; }
+        renderPendingVoidApprovals();
+    }
+
+    function renderPendingVoidApprovals() {
+        const pending = entries.filter(e => e.voidPending);
+        let m = document.getElementById('pending-voids-modal');
+        if (!pending.length && !m) return;   // nothing to show, don't create an empty modal unprompted
+
+        if (!m) {
+            m = document.createElement('div');
+            m.id = 'pending-voids-modal';
+            m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:400;display:flex;align-items:center;justify-content:center;padding:24px';
+            document.body.appendChild(m);
+        }
+
+        const rowsHtml = pending.map(e => {
+            const who    = entryLabel(e);
+            const when   = e.voidRequestedAt ? new Date(e.voidRequestedAt).toLocaleString('en-AU') : '';
+            return '<div style="border:1px solid #fde68a;background:#fffbeb;border-radius:14px;padding:14px 16px;margin-bottom:10px">' +
+                '<div style="font-weight:700">' + escHtml(who) + ' <span style="font-size:11px;color:#92400e;text-transform:uppercase">(' + (e.type === 'income' ? 'Donation' : 'Expense') + ')</span></div>' +
+                '<div style="font-size:12px;color:#78716c;margin:4px 0">Requested by ' + escHtml(e.voidRequestedBy || 'Unknown') + (when ? ' on ' + when : '') + '</div>' +
+                '<div style="font-size:13px;margin-bottom:10px"><strong>Reason:</strong> ' + escHtml(e.voidRequestReason || '') + '</div>' +
+                '<div style="display:flex;gap:8px">' +
+                    '<button onclick="approveVoidRequest(\'' + e.id + '\')" style="flex:1;background:#dc2626;color:#fff;border:none;padding:9px;border-radius:10px;font-weight:700;cursor:pointer">Approve void</button>' +
+                    '<button onclick="rejectVoidRequest(\'' + e.id + '\')" style="flex:1;background:#f1f5f9;color:#475569;border:none;padding:9px;border-radius:10px;font-weight:700;cursor:pointer">Reject</button>' +
+                '</div>' +
+            '</div>';
+        }).join('');
+
+        m.innerHTML =
+            '<div style="background:#fff;border-radius:20px;padding:28px;max-width:520px;width:100%;max-height:80vh;overflow:auto">' +
+                '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">' +
+                    '<h3 style="font-size:20px;font-weight:900;margin:0">Pending void approvals</h3>' +
+                    '<button onclick="document.getElementById(\'pending-voids-modal\').remove()" style="background:none;border:none;font-size:24px;line-height:1;cursor:pointer;color:#94a3b8">&times;</button>' +
+                '</div>' +
+                (pending.length ? rowsHtml : '<div style="text-align:center;color:#94a3b8;padding:24px">No void requests waiting for approval.</div>') +
+            '</div>';
+    }
+
+    // Keep the Ledger toolbar button's badge count current whenever the ledger redraws.
+    function updatePendingVoidBadge() {
+        const btn = document.getElementById('pending-voids-btn');
+        if (!btn) return;
+        const n = entries.filter(e => e.voidPending).length;
+        btn.innerHTML = n ? `⏳ Pending void approvals (${n})` : '⏳ Pending void approvals';
+        btn.style.display = (currentUser && currentUser.role === 'admin') ? '' : 'none';
     }
 
     // ── AUDIT LOG ──
@@ -5021,13 +5343,26 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
         showToast(`Welcome back, ${user.name}! Syncing data…`, 'emerald');
         // Pull latest data from Google Sheets so all users see shared data
         await pullFromCloud();
+        // Keep syncing quietly in the background so entries made on another
+        // device show up here within seconds, not just at next login.
+        startAutoSync();
+        // Admins get an explicit heads-up about void requests waiting on them.
+        if (currentUser.role === 'admin') {
+            const pendingVoids = entries.filter(e => e.voidPending).length;
+            if (pendingVoids > 0) {
+                showToast(`⏳ ${pendingVoids} void request${pendingVoids > 1 ? 's' : ''} awaiting your approval — see Ledger → Pending void approvals.`, 'amber');
+            }
+        }
         // First login (or admin-set password): require the user to set their own.
         if (currentUser.mustChangePassword) openForcedPasswordChange();
     }
 
     // ── Pull shared data from Google Sheets ──
-    async function pullFromCloud() {
+    let _cloudPullInFlight = false;
+    async function pullFromCloud(silent) {
         if (!syncConfig.enabled || !syncConfig.url) return;
+        if (_cloudPullInFlight) return;   // don't stack overlapping pulls (e.g. poll timer + manual Sync Now)
+        _cloudPullInFlight = true;
         try {
             const data = await fetchJsonRetry(syncConfig.url + '?action=pull&key=' + encodeURIComponent(await authToken()), { method: 'GET' }, 2);
             if (!data) throw new Error('Pull failed');
@@ -5054,6 +5389,69 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
                 safeStorage.setItem('ssmvp_entries', JSON.stringify(entries));
             }
 
+            // ── Reconcile void status (and void-request status) from the durable audit trail ──
+            // The Donations/Expenses sheet historically wasn't updated when an
+            // entry was voided, so a merge could bring a stale "active" copy
+            // back after local storage was reset. The audit log is append-only
+            // and always current, so replay it in order per entry and treat the
+            // outcome as authoritative — this also self-heals entries that were
+            // voided before this fix, and keeps void requests/approvals/rejections
+            // consistent across every device an admin or volunteer signs in on.
+            try {
+                const auditRes  = await fetch(syncConfig.url + '?action=auditlog&key=' + encodeURIComponent(await authToken()), { method: 'GET' });
+                const auditData = await auditRes.json().catch(() => ({}));
+                if (auditData && Array.isArray(auditData.auditLog)) {
+                    const byId = new Map(entries.map(en => [String(en.id), en]));
+                    let changed = false;
+                    const voidEvents = auditData.auditLog
+                        .filter(a => a.entryId && ['void', 'void_requested', 'void_approved', 'void_rejected'].includes(a.action))
+                        .sort((a, b) => new Date(a.at) - new Date(b.at));   // oldest first, so the last event wins
+
+                    voidEvents.forEach(a => {
+                        const en = byId.get(String(a.entryId));
+                        if (!en) return;
+                        const reason = (a.detail || '').replace(/^Reason:\s*/, '');
+
+                        if (a.action === 'void' || a.action === 'void_approved') {
+                            if (!en.voided) {
+                                en.voided      = true;
+                                en.voidReason  = reason || en.voidReason || 'Recovered from audit log';
+                                en.voidPending = false;
+                                if (!en.auditTrail) en.auditTrail = [];
+                                en.auditTrail.push({ action: a.action, at: a.at, by: a.by, reason: en.voidReason });
+                                changed = true;
+                            }
+                        } else if (a.action === 'void_requested') {
+                            if (!en.voided && !en.voidPending) {
+                                en.voidPending       = true;
+                                en.voidRequestReason = reason;
+                                en.voidRequestedBy   = a.by;
+                                en.voidRequestedAt   = a.at;
+                                if (!en.auditTrail) en.auditTrail = [];
+                                en.auditTrail.push({ action: 'void_requested', at: a.at, by: a.by, reason });
+                                changed = true;
+                            }
+                        } else if (a.action === 'void_rejected') {
+                            if (en.voidPending) {
+                                en.voidPending       = false;
+                                en.voidRequestReason = '';
+                                if (!en.auditTrail) en.auditTrail = [];
+                                en.auditTrail.push({ action: 'void_rejected', at: a.at, by: a.by, reason });
+                                changed = true;
+                            }
+                        }
+                    });
+
+                    if (changed) {
+                        safeStorage.setItem('ssmvp_entries', JSON.stringify(entries));
+                        updateBalance();
+                        showToast('Synced void status/requests from the audit log — see the ledger.', 'amber');
+                    }
+                }
+            } catch (err) {
+                console.warn('Void reconciliation from audit log failed:', err);
+            }
+
             updateBalance();
             updateDonorDatalist();
             updateVendorDatalist();
@@ -5061,18 +5459,49 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
             renderVendors();
             renderOrgs();
             renderSantos();
-            showToast('✅ Synced — existing data preserved.', 'emerald');
+            // Keep whichever tab is currently open live — donors/vendors/orgs/santos
+            // already re-render above; the ledger (and its pending-void badge) needs
+            // its own refresh since it's not touched by the merge helpers.
+            if (document.getElementById('tab-ledger')?.classList.contains('active')) renderLedger();
+            if (!silent) showToast('✅ Synced — existing data preserved.', 'emerald');
         } catch (err) {
             console.warn('Cloud pull failed (using local cache):', err);
             // Not a hard error — local data still shown
+        } finally {
+            _cloudPullInFlight = false;
         }
     }
+
+    // ── Keep-alive auto-sync so two people on different devices see each other's
+    // entries within seconds, instead of only at next login. ──
+    let _autoSyncTimer = null;
+    const AUTO_SYNC_INTERVAL_MS = 15000;   // 15s — near-real-time without hammering Apps Script
+
+    function startAutoSync() {
+        stopAutoSync();
+        if (!syncConfig.enabled || !syncConfig.url) return;
+        _autoSyncTimer = setInterval(() => {
+            if (!currentUser) return;
+            if (document.hidden) return;   // skip while tab is backgrounded — resumes via visibilitychange below
+            pullFromCloud(true);
+        }, AUTO_SYNC_INTERVAL_MS);
+    }
+
+    function stopAutoSync() {
+        if (_autoSyncTimer) { clearInterval(_autoSyncTimer); _autoSyncTimer = null; }
+    }
+
+    // Catch up immediately when the tab regains focus, rather than waiting for the next tick.
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && currentUser) pullFromCloud(true);
+    });
 
     // ── Logout ──
     function logoutApp() {
         const who = currentUser ? currentUser.name : 'Unknown';
         audit('logout', `${who} signed out`);
         currentUser = null; mfaCode = null; mfaTarget = null;
+        stopAutoSync();
         ['login-step1-error','login-step2-error','login-step-setup-error','login-totp-error'].forEach(id => {
             const el = document.getElementById(id); if (el) el.style.display = 'none';
         });
@@ -6539,9 +6968,9 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
     // (The firstTimeSetup() function is still defined; it can be called from the browser
     //  console if a brand-new environment ever needs its first admin bootstrapped.)
 
-    /* ════════════ Pending donor sign-ups (admin review of QR submissions) ════════════ */
+    /* ════════════ Pending donor sign-ups (admin + volunteer review of QR submissions) ════════════ */
     async function openPendingSignups(){
-        if (!currentUser || currentUser.role !== 'admin'){ showToast('Admins only.', 'amber'); return; }
+        if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'volunteer')){ showToast('Please sign in to review sign-ups.', 'amber'); return; }
         let data = null;
         for (let i = 0; i < 2; i++){
             try { data = await apiPost({ action:'list_signups', session: sessionToken }); if (data && data.ok) break; }
@@ -6651,7 +7080,7 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
     // list for individual review (per the chosen bulk policy). Reuses the existing
     // approve_signup backend action — no backend change.
     async function approveAllClearlyNew(){
-        if (!currentUser || currentUser.role !== 'admin'){ showToast('Admins only.', 'amber'); return; }
+        if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'volunteer')){ showToast('Please sign in to review sign-ups.', 'amber'); return; }
         const clearly = (_pendingList || []).filter(function(s){
             return (s.matches || []).length === 0 && (s.pendingDupes || []).length === 0;
         });
@@ -6689,7 +7118,7 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
             busyClear('signup');
         }
     }
-    // Inject the "Pending sign-ups" button into the Donor Directory toolbar (admins use it).
+    // Inject the "Pending sign-ups" button into the Donor Directory toolbar (admins and volunteers use it).
     (function(){
         try {
             var grid = document.getElementById('donor-grid');
