@@ -10,13 +10,25 @@
          If a needed resource is ever blocked, add its origin to the matching directive below. -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://unpkg.com https://cdnjs.cloudflare.com https://accounts.google.com https://apis.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.tailwindcss.com https://accounts.google.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://api.qrserver.com https://*.googleusercontent.com https://www.gstatic.com; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com; frame-src 'self' https://accounts.google.com; frame-ancestors 'none'; base-uri 'self'; object-src 'none'">
     <title>SSMVP Portal • Vadtal Dham Perth</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Warm up connections to third-party origins early so the actual downloads
+         below start sooner (saves a DNS+TLS round trip per origin). -->
+    <link rel="preconnect" href="https://cdn.tailwindcss.com">
+    <link rel="preconnect" href="https://unpkg.com">
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- "defer" lets the browser parse/render the page while these download,
+         instead of blocking on each one in turn — they still all finish (in
+         order) before init() runs on DOMContentLoaded below. -->
+    <script src="https://cdn.tailwindcss.com" defer></script>
+    <script src="https://unpkg.com/lucide@latest" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
+    <!-- Non-blocking font load: applies once fetched instead of holding up rendering. -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"></noscript>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
         * { box-sizing: border-box; }
         body { font-family: 'Inter', sans-serif; scroll-behavior: smooth; }
         .tab-content { display: none; }
@@ -5389,68 +5401,10 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
                 safeStorage.setItem('ssmvp_entries', JSON.stringify(entries));
             }
 
-            // ── Reconcile void status (and void-request status) from the durable audit trail ──
-            // The Donations/Expenses sheet historically wasn't updated when an
-            // entry was voided, so a merge could bring a stale "active" copy
-            // back after local storage was reset. The audit log is append-only
-            // and always current, so replay it in order per entry and treat the
-            // outcome as authoritative — this also self-heals entries that were
-            // voided before this fix, and keeps void requests/approvals/rejections
-            // consistent across every device an admin or volunteer signs in on.
-            try {
-                const auditRes  = await fetch(syncConfig.url + '?action=auditlog&key=' + encodeURIComponent(await authToken()), { method: 'GET' });
-                const auditData = await auditRes.json().catch(() => ({}));
-                if (auditData && Array.isArray(auditData.auditLog)) {
-                    const byId = new Map(entries.map(en => [String(en.id), en]));
-                    let changed = false;
-                    const voidEvents = auditData.auditLog
-                        .filter(a => a.entryId && ['void', 'void_requested', 'void_approved', 'void_rejected'].includes(a.action))
-                        .sort((a, b) => new Date(a.at) - new Date(b.at));   // oldest first, so the last event wins
-
-                    voidEvents.forEach(a => {
-                        const en = byId.get(String(a.entryId));
-                        if (!en) return;
-                        const reason = (a.detail || '').replace(/^Reason:\s*/, '');
-
-                        if (a.action === 'void' || a.action === 'void_approved') {
-                            if (!en.voided) {
-                                en.voided      = true;
-                                en.voidReason  = reason || en.voidReason || 'Recovered from audit log';
-                                en.voidPending = false;
-                                if (!en.auditTrail) en.auditTrail = [];
-                                en.auditTrail.push({ action: a.action, at: a.at, by: a.by, reason: en.voidReason });
-                                changed = true;
-                            }
-                        } else if (a.action === 'void_requested') {
-                            if (!en.voided && !en.voidPending) {
-                                en.voidPending       = true;
-                                en.voidRequestReason = reason;
-                                en.voidRequestedBy   = a.by;
-                                en.voidRequestedAt   = a.at;
-                                if (!en.auditTrail) en.auditTrail = [];
-                                en.auditTrail.push({ action: 'void_requested', at: a.at, by: a.by, reason });
-                                changed = true;
-                            }
-                        } else if (a.action === 'void_rejected') {
-                            if (en.voidPending) {
-                                en.voidPending       = false;
-                                en.voidRequestReason = '';
-                                if (!en.auditTrail) en.auditTrail = [];
-                                en.auditTrail.push({ action: 'void_rejected', at: a.at, by: a.by, reason });
-                                changed = true;
-                            }
-                        }
-                    });
-
-                    if (changed) {
-                        safeStorage.setItem('ssmvp_entries', JSON.stringify(entries));
-                        updateBalance();
-                        showToast('Synced void status/requests from the audit log — see the ledger.', 'amber');
-                    }
-                }
-            } catch (err) {
-                console.warn('Void reconciliation from audit log failed:', err);
-            }
+            // Reconcile void status from the audit log in the background — it's a
+            // second network round trip, and nothing on screen needs to block on
+            // it (see reconcileVoidStatusFromAuditLog for what it does and why).
+            reconcileVoidStatusFromAuditLog();
 
             updateBalance();
             updateDonorDatalist();
@@ -5469,6 +5423,74 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
             // Not a hard error — local data still shown
         } finally {
             _cloudPullInFlight = false;
+        }
+    }
+
+    // ── Reconcile void status (and void-request status) from the durable audit trail ──
+    // The Donations/Expenses sheet historically wasn't updated when an entry was
+    // voided, so a merge could bring a stale "active" copy back after local
+    // storage was reset. The audit log is append-only and always current, so
+    // replay it in order per entry and treat the outcome as authoritative — this
+    // also self-heals entries that were voided before this fix, and keeps void
+    // requests/approvals/rejections consistent across every device an admin or
+    // volunteer signs in on. Runs in the background (not awaited by callers) so
+    // it never delays the screen from becoming usable.
+    async function reconcileVoidStatusFromAuditLog() {
+        if (!syncConfig.enabled || !syncConfig.url) return;
+        try {
+            const auditRes  = await fetch(syncConfig.url + '?action=auditlog&key=' + encodeURIComponent(await authToken()), { method: 'GET' });
+            const auditData = await auditRes.json().catch(() => ({}));
+            if (auditData && Array.isArray(auditData.auditLog)) {
+                const byId = new Map(entries.map(en => [String(en.id), en]));
+                let changed = false;
+                const voidEvents = auditData.auditLog
+                    .filter(a => a.entryId && ['void', 'void_requested', 'void_approved', 'void_rejected'].includes(a.action))
+                    .sort((a, b) => new Date(a.at) - new Date(b.at));   // oldest first, so the last event wins
+
+                voidEvents.forEach(a => {
+                    const en = byId.get(String(a.entryId));
+                    if (!en) return;
+                    const reason = (a.detail || '').replace(/^Reason:\s*/, '');
+
+                    if (a.action === 'void' || a.action === 'void_approved') {
+                        if (!en.voided) {
+                            en.voided      = true;
+                            en.voidReason  = reason || en.voidReason || 'Recovered from audit log';
+                            en.voidPending = false;
+                            if (!en.auditTrail) en.auditTrail = [];
+                            en.auditTrail.push({ action: a.action, at: a.at, by: a.by, reason: en.voidReason });
+                            changed = true;
+                        }
+                    } else if (a.action === 'void_requested') {
+                        if (!en.voided && !en.voidPending) {
+                            en.voidPending       = true;
+                            en.voidRequestReason = reason;
+                            en.voidRequestedBy   = a.by;
+                            en.voidRequestedAt   = a.at;
+                            if (!en.auditTrail) en.auditTrail = [];
+                            en.auditTrail.push({ action: 'void_requested', at: a.at, by: a.by, reason });
+                            changed = true;
+                        }
+                    } else if (a.action === 'void_rejected') {
+                        if (en.voidPending) {
+                            en.voidPending       = false;
+                            en.voidRequestReason = '';
+                            if (!en.auditTrail) en.auditTrail = [];
+                            en.auditTrail.push({ action: 'void_rejected', at: a.at, by: a.by, reason });
+                            changed = true;
+                        }
+                    }
+                });
+
+                if (changed) {
+                    safeStorage.setItem('ssmvp_entries', JSON.stringify(entries));
+                    updateBalance();
+                    if (document.getElementById('tab-ledger')?.classList.contains('active')) renderLedger();
+                    showToast('Synced void status/requests from the audit log — see the ledger.', 'amber');
+                }
+            }
+        } catch (err) {
+            console.warn('Void reconciliation from audit log failed:', err);
         }
     }
 
@@ -7282,7 +7304,14 @@ ${d.entry.accountNumber ? `<div style="font-size:12px;font-weight:700;margin-top
         return null;
     }
 
-    window.onload = init;
+    // DOMContentLoaded fires once the HTML/DOM is parsed and deferred scripts have
+    // run — it does not wait for images/fonts/every last network request the way
+    // window.onload does, so the login screen appears sooner.
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();   // DOM was already ready by the time this script ran
+    }
 </script>
 </body>
 </html>
