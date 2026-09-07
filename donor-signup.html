@@ -47,7 +47,7 @@
       <input id="lastName" type="text" autocomplete="family-name">
       <label>Email <span class="req">*</span></label>
       <input id="email" type="email" autocomplete="email" placeholder="you@example.com">
-      <label>Phone</label>
+      <label>Phone <span class="req">*</span></label>
       <input id="phone" type="tel" autocomplete="tel" placeholder="04xx xxx xxx">
       <label>Street address</label>
       <input id="address" type="text" autocomplete="address-line1">
@@ -58,7 +58,7 @@
       <input class="hp" id="website" type="text" tabindex="-1" autocomplete="off" aria-hidden="true">
       <div class="msg err" id="err"></div>
       <button id="submitBtn" onclick="submitSignup()">Register</button>
-      <div class="foot">Your email is required so we can send your receipt.</div>
+      <div class="foot">Your email and phone are required so we can send your receipt and reach you.</div>
     </div>
   </div>
 </div>
@@ -72,6 +72,7 @@
     if (!fn || !ln) { showErr('Please enter your first and last name.'); return; }
     if (!email) { showErr('Please enter your email address (needed for your receipt).'); return; }
     if (!/\S+@\S+\.\S+/.test(email)) { showErr('Please enter a valid email address.'); return; }
+    if (!phone) { showErr('Please enter your phone number.'); return; }
     document.getElementById('err').style.display = 'none';
     const btn = document.getElementById('submitBtn'); btn.disabled = true; btn.textContent = 'Submitting…';
     try {
@@ -88,7 +89,8 @@
         '<p style="margin-top:12px;font-weight:700;color:#8B1A1A">Jay Shree Swaminarayan</p></div>';
     } catch (err) {
       btn.disabled = false; btn.textContent = 'Register';
-      showErr('Sorry, something went wrong. Please try again.');
+      const map = { missing_name:'Please enter your first and last name.', missing_email:'Please enter your email address.', missing_phone:'Please enter your phone number.' };
+      showErr(map[err.message] || 'Sorry, something went wrong. Please try again.');
     }
   }
 </script>
